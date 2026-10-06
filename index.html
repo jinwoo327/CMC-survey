@@ -254,7 +254,7 @@ const ICON={
 const ENDPOINT="https://script.google.com/macros/s/AKfycbxNm-5MkL5uEUDXlnJJkCBgjsL9ddasTbMh7sdAXIauR1sHf182mWox8aJ8r-qxW28S/exec";
 
 async function callEndpoint(method,body){
-  const ctl=new AbortController();const t=setTimeout(()=>ctl.abort(),45000);
+  const ctl=new AbortController();const t=setTimeout(()=>ctl.abort(),60000);
   try{
     const url=method==="GET"?ENDPOINT+(ENDPOINT.includes("?")?"&":"?")+"ping="+Date.now():ENDPOINT;
     const res=await fetch(url,method==="GET"?{signal:ctl.signal,cache:"no-store"}:{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(body),signal:ctl.signal,cache:"no-store"});
@@ -262,6 +262,8 @@ async function callEndpoint(method,body){
     return await res.json();
   }finally{clearTimeout(t)}
 }
+
+function warmUp(){if(ENDPOINT)callEndpoint("GET").catch(()=>{})}
 
 /* ================= INTRO: guide chatbot ================= */
 let log;
@@ -355,13 +357,14 @@ async function runIntro(){
   }
   S.consentAt=new Date().toISOString();
   // Make sure this view can actually save before asking anything else.
-  const t=$("div",{class:"hint"},"저장 환경을 확인하고 있어요…");composer().append(t);
-  let chk=await checkSaving();t.remove();
+  const t=$("div",{class:"hint"},"저장 서버에 연결하는 중이에요… 처음에는 1분 정도 걸릴 수 있어요.");composer().append(t);
+  const t0=Date.now();const tick=setInterval(()=>{t.textContent="저장 서버에 연결하는 중이에요… "+Math.round((Date.now()-t0)/1000)+"초 (처음에는 1분 정도 걸릴 수 있어요)"},1000);
+  let chk=await checkSaving();clearInterval(tick);t.remove();
   while(!chk.ok&&chk.retry){
-    await bot("저장 서버가 조금 늦게 깨어나고 있어요. 잠시 후 다시 시도해 주세요.");
+    await bot("저장 서버 연결이 오래 걸리고 있어요. 잠시 후 다시 시도해 주세요.");
     composer().append($("div",{class:"hint"},"오류 내용: "+chk.detail));
     await askChoice([{label:"다시 시도",value:true,primary:true}]);
-    const w=$("div",{class:"hint"},"저장 환경을 확인하고 있어요…");composer().append(w);
+    const w=$("div",{class:"hint"},"저장 서버에 연결하는 중이에요…");composer().append(w);
     chk=await checkSaving();w.remove();
   }
   if(!chk.ok){await bot(chk.message);composer().append($("div",{class:"hint"},"설문이 종료되었습니다."));return}
@@ -397,10 +400,11 @@ async function checkSaving(){
   const fail="지금은 응답을 저장할 서버에 연결할 수 없어서 설문을 진행할 수 없어요. 인터넷 연결을 확인한 뒤 페이지를 새로고침해 주세요. 문제가 계속되면 연구자에게 알려 주세요.";
   if(!ENDPOINT)return{ok:false,message:fail};
   let lastErr="";
-  for(let i=0;i<3;i++){
+  const start=Date.now();
+  while(Date.now()-start<120000){
     try{const r=await callEndpoint("GET");if(r&&r.ok===true)return{ok:true};lastErr="응답 형식 오류"}
     catch(e){lastErr=e&&e.name==="AbortError"?"시간 초과":(e&&e.message)||"네트워크 오류"}
-    await new Promise(r=>setTimeout(r,1500*(i+1)));
+    await new Promise(r=>setTimeout(r,3000));
   }
   return{ok:false,retry:true,message:fail,detail:lastErr};
 }
@@ -479,7 +483,7 @@ function scenarioScreen(){
     else if(ans.reason==="other"&&!ans.other.trim()){setErr(q2,"‘기타’를 골랐다면 이유를 직접 적어 주세요.");bad=bad||q2}
     if(bad){bad.scrollIntoView({behavior:reduce?"auto":"smooth",block:"center"});return}
     if(!last){S.idx++;scenarioScreen();return}
-    const btn=document.getElementById("nextbtn");btn.disabled=true;btn.textContent="저장 중…";status.className="msg";status.textContent="";
+    const btn=document.getElementById("nextbtn");btn.disabled=true;btn.textContent="저장 중… 최대 1분 정도 걸릴 수 있어요";status.className="msg";status.textContent="";
     const r=await submit();
     if(r.ok){S.phase="done";endScreen()}
     else{btn.disabled=false;btn.textContent="다시 제출하기";status.className="msg bad";status.textContent=r.message}
