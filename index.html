@@ -1,0 +1,518 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>읽씹·안읽씹 설문</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+/* Layout: one phone-width column; messenger-coloured chat on top, a plain paper survey sheet below it. */
+:root{
+  --chat-bg:#B2C7D9; --mine:#FEE500; --mine-fg:#191919; --theirs:#FFFFFF; --theirs-fg:#191919;
+  --chat-meta:#4E5D6B; --unread:#F5C400; --divider:rgba(0,0,0,.14); --divider-fg:#FFFFFF;
+  --bar:#A9BED1; --bar-fg:#16212B;
+  --paper:#FFFFFF; --page:#E9EDF1; --ink:#1B2430; --muted:#5F6B78; --line:#DCE2E8; --soft:#F3F5F8;
+  --accent:#2B3A55; --accent-fg:#FFFFFF; --accent-soft:#E4E9F2; --danger:#C93A30; --danger-soft:#FBEAE8;
+  --ok:#2E7D4F;
+  --f-body:"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --chat-bg:#2A3139; --mine:#F2D500; --mine-fg:#191919; --theirs:#3C444D; --theirs-fg:#EEF1F4;
+  --chat-meta:#9AA6B2; --unread:#F5C400; --divider:rgba(255,255,255,.10); --divider-fg:#C9D1D9;
+  --bar:#222930; --bar-fg:#E6EAEE;
+  --paper:#1A1F25; --page:#12161A; --ink:#E8ECF0; --muted:#9AA5B1; --line:#323A43; --soft:#232A31;
+  --accent:#AFC3E6; --accent-fg:#111821; --accent-soft:#273246; --danger:#F08A80; --danger-soft:#3A2321;
+  --ok:#7CCB9C; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --chat-bg:#2A3139; --mine:#F2D500; --mine-fg:#191919; --theirs:#3C444D; --theirs-fg:#EEF1F4;
+  --chat-meta:#9AA6B2; --unread:#F5C400; --divider:rgba(255,255,255,.10); --divider-fg:#C9D1D9;
+  --bar:#222930; --bar-fg:#E6EAEE;
+  --paper:#1A1F25; --page:#12161A; --ink:#E8ECF0; --muted:#9AA5B1; --line:#323A43; --soft:#232A31;
+  --accent:#AFC3E6; --accent-fg:#111821; --accent-soft:#273246; --danger:#F08A80; --danger-soft:#3A2321;
+  --ok:#7CCB9C; color-scheme:dark;
+}
+html,body{height:100%}
+body{margin:0}
+:root{padding-top:env(safe-area-inset-top,0px)}
+[hidden]{display:none!important}
+img{max-width:100%}
+.app:has(#intro){height:100%}
+body{background:var(--page);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.55;-webkit-text-size-adjust:100%}
+*{box-sizing:border-box}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.app{max-width:480px;margin:0 auto;min-height:100%;background:var(--paper);display:flex;flex-direction:column;position:relative}
+.screen{display:flex;flex-direction:column;flex:1;min-height:0}
+
+/* ---------- shared chat pieces ---------- */
+.chatbar{background:var(--bar);color:var(--bar-fg);display:flex;align-items:center;gap:10px;padding:10px 16px;min-height:52px}
+.chatbar .title{font-weight:700;font-size:16px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chatbar svg{width:22px;height:22px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.chatarea{background:var(--chat-bg);padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.daypill{align-self:center;background:var(--divider);color:var(--divider-fg);font-size:12px;padding:3px 12px;border-radius:999px;margin:4px 0 6px}
+.row{display:flex;gap:6px;align-items:flex-end}
+.row.me{justify-content:flex-end}
+.bubble{max-width:74%;padding:8px 11px;border-radius:14px;font-size:14.5px;line-height:1.5;word-break:keep-all;overflow-wrap:anywhere;white-space:pre-line}
+.me .bubble{background:var(--mine);color:var(--mine-fg);border-top-right-radius:4px}
+.them .bubble{background:var(--theirs);color:var(--theirs-fg);border-top-left-radius:4px}
+.meta{display:flex;flex-direction:column;align-items:flex-end;font-size:11px;color:var(--chat-meta);line-height:1.25;flex:none}
+.them .meta{align-items:flex-start}
+.meta .unread{color:var(--unread);font-weight:700;font-size:12px}
+.avatar{width:38px;height:38px;border-radius:15px;background:#8EA6BD;display:grid;place-items:center;flex:none;align-self:flex-start}
+.avatar svg{width:22px;height:22px;stroke:#fff;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.them-col{display:flex;flex-direction:column;gap:4px;min-width:0;max-width:calc(100% - 44px)}
+.them-col .name{font-size:12.5px;color:var(--chat-meta)}
+.them-col .stack{display:flex;flex-direction:column;gap:5px}
+.them-col .row{gap:6px}
+.them-col .bubble{max-width:100%}
+.typing{display:inline-flex;gap:4px;padding:12px 14px}
+.typing i{width:6px;height:6px;border-radius:50%;background:var(--chat-meta);opacity:.5;animation:blink 1s infinite}
+.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
+@keyframes blink{0%,100%{opacity:.25}50%{opacity:.9}}
+@media (prefers-reduced-motion: reduce){.typing i{animation:none}.fade{animation:none!important}}
+
+/* ---------- intro (chatbot) ---------- */
+#intro{background:var(--chat-bg);height:100%}
+#intro .chatarea{flex:1;overflow-y:auto;min-height:0;padding-bottom:20px}
+.composer{background:var(--paper);border-top:1px solid var(--line);padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:8px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1px solid var(--line);background:var(--paper);border-radius:999px;padding:8px 14px;font-size:14px}
+.chip.primary{background:var(--mine);border-color:var(--mine);color:var(--mine-fg);font-weight:700}
+.chip:disabled{opacity:.45;cursor:default}
+.inline{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.field{flex:1;min-width:0;border:1px solid var(--line);background:var(--soft);border-radius:20px;padding:9px 14px;font-size:15px}
+.field.num{flex:0 1 110px;text-align:right;font-variant-numeric:tabular-nums}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:20px;overflow:hidden;flex:none}
+.seg button{border:0;background:transparent;padding:8px 13px;font-size:14px}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg);font-weight:700}
+.send{border:0;background:var(--mine);color:var(--mine-fg);font-weight:700;border-radius:20px;padding:9px 16px;flex:none}
+.hint{font-size:12.5px;color:var(--muted)}
+.err{font-size:13px;color:var(--danger)}
+.researcher-link{position:absolute;top:12px;right:16px;font-size:12px;border:1px solid var(--bar-fg);color:var(--bar-fg);background:transparent;border-radius:999px;padding:3px 10px;opacity:.75}
+
+/* ---------- scenario ---------- */
+#scenario{background:var(--paper)}
+.phone{background:var(--chat-bg)}
+.status{display:flex;justify-content:space-between;align-items:center;padding:6px 16px 4px;background:var(--bar);color:var(--bar-fg);font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums}
+.status .right{display:flex;align-items:center;gap:6px;font-weight:500}
+.status svg{width:22px;height:12px}
+.phone .chatbar{min-height:46px;padding-block:6px}
+.phone .chatarea{min-height:170px;justify-content:flex-end}
+.fakeinput{display:flex;gap:8px;align-items:center;padding:8px 16px;background:var(--paper);border-bottom:1px solid var(--line)}
+.fakeinput span{flex:1;background:var(--soft);border-radius:18px;padding:6px 12px;font-size:13px;color:var(--muted)}
+.fakeinput svg{width:20px;height:20px;stroke:var(--muted);fill:none;stroke-width:1.8;stroke-linecap:round}
+.fade{animation:fade .35s ease}
+@keyframes fade{from{opacity:.2;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+.sheet{padding:18px 16px calc(24px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:18px}
+.progress{display:flex;flex-direction:column;gap:8px}
+.progress .top{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:13px;color:var(--muted)}
+.progress .top b{color:var(--ink);font-size:14px}
+.track{height:4px;background:var(--line);border-radius:4px;overflow:hidden}
+.track i{display:block;height:100%;background:var(--accent);transition:width .3s}
+.rels{display:flex;gap:6px;flex-wrap:wrap}
+.rel{font-size:12.5px;padding:3px 10px;border-radius:999px;background:var(--soft);color:var(--muted);display:inline-flex;gap:4px;align-items:center}
+.rel.done{color:var(--ok)}
+.rel.now{background:var(--accent);color:var(--accent-fg);font-weight:700}
+.notice{background:var(--accent-soft);border-radius:10px;padding:10px 12px;font-size:13.5px}
+.guide{font-size:15px}
+.sit{border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.sit-time{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--soft)}
+.sit-time>div:not(.arrow){display:flex;flex-direction:column;flex:1;min-width:0}
+.sit-time span{font-size:12px;color:var(--muted)}
+.sit-time b{font-size:15px;font-variant-numeric:tabular-nums}
+.sit-time .arrow{color:var(--muted);flex:none}
+.sit-sum{padding:10px 14px;font-size:14px}
+.sit-sum b{color:var(--accent)}
+.q h3 .ctx{display:block;font-size:13px;font-weight:500;color:var(--muted);margin-bottom:2px}
+.guide b{font-weight:700}
+.q{display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--line);padding-top:16px}
+.q h3{margin:0;font-size:16px;font-weight:700;text-wrap:balance}
+.q h3 small{font-weight:400;color:var(--muted);font-size:13px;margin-left:4px}
+.q.invalid h3{color:var(--danger)}
+.scale{display:grid;grid-template-columns:repeat(10,1fr);gap:4px}
+.scale button{border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:10px 0;font-weight:700;font-variant-numeric:tabular-nums;font-size:15px;min-width:0}
+.scale button[aria-checked="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.ends{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);gap:12px}
+.ends span:last-child{text-align:right}
+.opts{display:flex;flex-direction:column;gap:6px}
+.opt{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:14.5px;background:var(--paper);text-align:left;width:100%}
+.opt .dot{width:18px;height:18px;border-radius:50%;border:2px solid var(--line);flex:none;margin-top:2px;display:grid;place-items:center}
+.opt[aria-checked="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.opt[aria-checked="true"] .dot{border-color:var(--accent)}
+.opt[aria-checked="true"] .dot::after{content:"";width:8px;height:8px;border-radius:50%;background:var(--accent)}
+.other{border:1px solid var(--line);background:var(--soft);border-radius:10px;padding:10px 12px;font-size:14.5px;width:100%}
+.qerr{font-size:13px;color:var(--danger);background:var(--danger-soft);border-radius:8px;padding:6px 10px}
+.nav{display:flex;gap:8px}
+.btn{border:0;border-radius:12px;padding:14px 16px;font-weight:700;font-size:16px}
+.btn.main{background:var(--accent);color:var(--accent-fg);flex:1}
+.btn.ghost{background:var(--soft);color:var(--ink);flex:none;font-weight:500}
+.btn:disabled{opacity:.55;cursor:default}
+
+/* ---------- end + researcher ---------- */
+.center{flex:1;display:flex;flex-direction:column;justify-content:center;gap:14px;padding:40px 16px;text-align:center;align-items:center}
+.center h1{font-size:22px;margin:0;text-wrap:balance}
+.center p{margin:0;color:var(--muted);max-width:32ch}
+.idbox{font-variant-numeric:tabular-nums;background:var(--soft);border-radius:10px;padding:8px 14px;font-weight:700;letter-spacing:.04em}
+.mark{width:64px;height:64px;border-radius:24px;background:var(--mine);display:grid;place-items:center}
+.mark svg{width:34px;height:34px;stroke:#191919;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.admin{padding:20px 16px 32px;display:flex;flex-direction:column;gap:16px}
+.admin h1{font-size:20px;margin:0}
+.stats{display:flex;gap:10px;flex-wrap:wrap}
+.stat{background:var(--soft);border-radius:10px;padding:10px 14px;min-width:120px}
+.stat b{display:block;font-size:22px;font-variant-numeric:tabular-nums}
+.stat span{font-size:12px;color:var(--muted)}
+.dl{display:flex;flex-direction:column;gap:8px}
+.dl button{text-align:left;border:1px solid var(--line);background:var(--paper);border-radius:10px;padding:10px 12px}
+.dl button b{display:block}
+.dl button span{font-size:12.5px;color:var(--muted)}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric:tabular-nums}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{background:var(--soft);font-weight:700;font-size:12px;color:var(--muted)}
+td button{border:1px solid var(--line);background:transparent;border-radius:6px;padding:2px 8px;font-size:12px}
+td button.danger{border-color:var(--danger);color:var(--danger)}
+.msg{font-size:13.5px}
+.msg.bad{color:var(--danger)}
+.link{background:none;border:0;color:var(--accent);text-decoration:underline;padding:0;font-size:14px;align-self:flex-start}
+</style>
+</head>
+<body>
+
+<div class="app" id="app"></div>
+
+<script>
+(function(){
+"use strict";
+/* ================= study definition ================= */
+const RELS=[
+  {key:"friend",label:"가까운 친구",contact:"친한 친구",msg:"이번 주에 잠깐 얘기할 수 있어?"},
+  {key:"partner",label:"연인",contact:"애인 ♥",msg:"이번 주에 잠깐 얘기할 수 있어?"},
+  {key:"family",label:"가족",contact:"가족",msg:"이번 주에 잠깐 얘기할 수 있어?"},
+  {key:"professor",label:"교수님",contact:"교수님",msg:"이번 주에 잠깐 이야기할 수 있을까요?"}
+];
+// Fixed fictional clock shared by every respondent.
+const SITS=[
+  {n:1,elapsed:"2h",read:true, sentDay:"2026년 10월 14일 수요일",sentShort:"오늘 오후 1:10",ko:"2시간",sentTime:"오후 1:10",nowDate:"10월 14일 (수)",nowTime:"오후 3:10"},
+  {n:2,elapsed:"2h",read:false,sentDay:"2026년 10월 14일 수요일",sentShort:"오늘 오후 1:10",ko:"2시간",sentTime:"오후 1:10",nowDate:"10월 14일 (수)",nowTime:"오후 3:10"},
+  {n:3,elapsed:"1d",read:false,sentDay:"2026년 10월 13일 화요일",sentShort:"어제 오후 3:10",ko:"하루",sentTime:"오후 3:10",nowDate:"10월 14일 (수)",nowTime:"오후 3:10"},
+  {n:4,elapsed:"1d",read:true, sentDay:"2026년 10월 13일 화요일",sentShort:"어제 오후 3:10",ko:"하루",sentTime:"오후 3:10",nowDate:"10월 14일 (수)",nowTime:"오후 3:10"}
+];
+const REASONS={
+  read:[
+    ["busy","바빠서 아직 답장하지 못했다"],
+    ["deliberating","답장을 신중하게 생각하고 있다"],
+    ["postponed_forgot","읽고 나서 답장을 미루거나 잊었다"],
+    ["unwilling","답장하고 싶지 않다"],
+    ["unsure","잘 모르겠다"],
+    ["other","기타(직접 입력)"]],
+  unread:[
+    ["not_seen","메시지가 온 것을 아직 못 봤다"],
+    ["busy_unopened","바빠서 대화방을 열지 못했다"],
+    ["preview_later","알림 미리보기로 봤지만 나중에 답장하려 한다"],
+    ["avoid_opening","답장하고 싶지 않아 일부러 열지 않았다"],
+    ["unsure","잘 모르겠다"],
+    ["other","기타(직접 입력)"]]
+};
+const TRIALS=[];SITS.forEach(s=>RELS.forEach(r=>TRIALS.push({s,r})));
+const UNIT_MIN={"분":1,"시간":60,"일":1440};
+const VERSION="2026-10-v1";
+
+/* ================= state ================= */
+const S={phase:"intro",anonId:makeId(),startedAt:new Date().toISOString(),demo:{},trials:{},idx:0};
+const DONE_KEY="reply-survey-done";
+const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
+if(/[?&]reset=1/.test(location.search))store.del(DONE_KEY);
+
+function makeId(){
+  const a="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";let s="R-";
+  const b=new Uint8Array(8);(crypto.getRandomValues?crypto.getRandomValues(b):b.forEach((_,i)=>b[i]=Math.random()*256|0));
+  b.forEach(x=>s+=a[x%a.length]);return s;
+}
+const $=(t,a,...k)=>{const e=document.createElement(t);if(a)for(const n in a){if(n==="class")e.className=a[n];else if(n==="html")e.innerHTML=a[n];else if(n.startsWith("on"))e.addEventListener(n.slice(2),a[n]);else if(a[n]!==false&&a[n]!=null)e.setAttribute(n,a[n]===true?"":a[n]);}k.flat().forEach(c=>c!=null&&e.append(c.nodeType?c:document.createTextNode(c)));return e};
+const app=document.getElementById("app");
+const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+const wait=ms=>new Promise(r=>setTimeout(r,reduce?Math.min(ms,120):ms));
+
+const ICON={
+  back:'<svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>',
+  search:'<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>',
+  menu:'<svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg>',
+  bot:'<svg viewBox="0 0 24 24"><rect x="5" y="8" width="14" height="11" rx="3"/><path d="M12 4v4M9.5 13h.01M14.5 13h.01"/></svg>',
+  check:'<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  plus:'<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
+  battery:'<svg viewBox="0 0 26 13" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1" y="1.5" width="21" height="10" rx="2.5"/><rect x="3" y="3.5" width="14" height="6" rx="1" fill="currentColor" stroke="none"/><path d="M24 5v3"/></svg>'
+};
+
+/* ================= where responses go =================
+   Paste the Apps Script web-app URL (ends with /exec) between the quotes. */
+const ENDPOINT="https://script.google.com/macros/s/AKfycbxNm-5MkL5uEUDXlnJJkCBgjsL9ddasTbMh7sdAXIauR1sHf182mWox8aJ8r-qxW28S/exec";
+
+async function callEndpoint(method,body){
+  const ctl=new AbortController();const t=setTimeout(()=>ctl.abort(),30000);
+  try{
+    const res=await fetch(ENDPOINT,method==="GET"?{signal:ctl.signal}:{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(body),signal:ctl.signal});
+    if(!res.ok)throw new Error("HTTP "+res.status);
+    return await res.json();
+  }finally{clearTimeout(t)}
+}
+
+/* ================= INTRO: guide chatbot ================= */
+let log;
+function introScreen(){
+  app.innerHTML="";
+  const scr=$("section",{class:"screen",id:"intro"});
+  const bar=$("header",{class:"chatbar"},$("span",{html:ICON.back,"aria-hidden":"true"}),$("span",{class:"title"},"설문 안내"),$("span",{html:ICON.menu,"aria-hidden":"true"}));
+  log=$("div",{class:"chatarea",role:"log","aria-live":"polite"},$("div",{class:"daypill"},"설문 참여 안내"));
+  const comp=$("div",{class:"composer",id:"composer"});
+  scr.append(bar,log,comp);app.append(scr);
+  runIntro();
+}
+let lastBotGroup=null;
+function scrollLog(){log.scrollTop=log.scrollHeight}
+async function bot(text,delay){
+  let grp=lastBotGroup;
+  if(!grp){
+    const stack=$("div",{class:"stack"});
+    grp=$("div",{class:"row them"},$("div",{class:"avatar",html:ICON.bot,"aria-hidden":"true"}),$("div",{class:"them-col"},$("span",{class:"name"},"설문 안내봇"),stack));
+    grp.stack=stack;log.append(grp);lastBotGroup=grp;
+  }
+  const t=$("div",{class:"row them"},$("div",{class:"bubble typing","aria-label":"입력 중"},$("i"),$("i"),$("i")));
+  grp.stack.append(t);scrollLog();
+  await wait(delay??Math.min(1100,350+text.length*12));
+  t.replaceWith($("div",{class:"row them"},$("div",{class:"bubble"},text),$("div",{class:"meta"},$("span",null,nowLabel()))));
+  scrollLog();
+}
+function me(text){
+  lastBotGroup=null;
+  log.append($("div",{class:"row me"},$("div",{class:"meta"},$("span",null,nowLabel())),$("div",{class:"bubble"},text)));
+  scrollLog();
+}
+function nowLabel(){const d=new Date();let h=d.getHours(),m=String(d.getMinutes()).padStart(2,"0");return (h<12?"오전 ":"오후 ")+((h%12)||12)+":"+m}
+function composer(){return document.getElementById("composer")}
+
+function askChoice(options){
+  return new Promise(res=>{
+    const c=composer();c.innerHTML="";
+    const chips=$("div",{class:"chips"});
+    options.forEach(o=>chips.append($("button",{class:"chip"+(o.primary?" primary":""),onclick:()=>{c.innerHTML="";me(o.label);res(o.value)}},o.label)));
+    c.append(chips);chips.querySelector("button").focus({preventScroll:true});
+  });
+}
+function askText({placeholder,type="text",validate,id,hint}){
+  return new Promise(res=>{
+    const c=composer();c.innerHTML="";
+    const inp=$("input",{class:"field",id,type:"text",placeholder,autocomplete:"off",inputmode:type==="int"?"numeric":null,enterkeyhint:"send"});
+    const err=$("div",{class:"err",role:"alert"});
+    const go=()=>{const v=inp.value.trim();const r=validate(v);if(r.error){err.textContent=r.error;inp.focus();return}c.innerHTML="";me(r.display);res(r.value)};
+    inp.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.isComposing){e.preventDefault();go()}});
+    c.append($("div",{class:"inline"},inp,$("button",{class:"send",onclick:go},"전송")));
+    if(hint)c.append($("div",{class:"hint"},hint));
+    c.append(err);inp.focus({preventScroll:true});
+  });
+}
+function askDuration({id,allowZero,hint}){
+  return new Promise(res=>{
+    const c=composer();c.innerHTML="";
+    let unit="시간";
+    const inp=$("input",{class:"field num",id,type:"text",inputmode:"decimal",placeholder:"숫자",autocomplete:"off",enterkeyhint:"send","aria-label":"시간 입력"});
+    const seg=$("div",{class:"seg",role:"group","aria-label":"단위"});
+    Object.keys(UNIT_MIN).forEach(u=>{const b=$("button",{"aria-pressed":String(u===unit),onclick:()=>{unit=u;seg.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",String(x.textContent===u)))}},u);seg.append(b)});
+    const err=$("div",{class:"err",role:"alert"});
+    const go=()=>{
+      const raw=inp.value.trim().replace(",",".");const v=Number(raw);
+      if(raw===""||!isFinite(v)){err.textContent="숫자로 입력해 주세요. 예: 30분이면 30을 쓰고 ‘분’을 고르세요.";inp.focus();return}
+      if(v<0||(!allowZero&&v===0)){err.textContent=allowZero?"0 이상의 숫자를 입력해 주세요.":"0보다 큰 숫자를 입력해 주세요.";inp.focus();return}
+      const minutes=Math.round(v*UNIT_MIN[unit]*100)/100;
+      if(minutes>60*24*60){err.textContent="60일 이내로 입력해 주세요.";inp.focus();return}
+      c.innerHTML="";me(fmtNum(v)+unit);res({value:v,unit,minutes});
+    };
+    inp.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.isComposing){e.preventDefault();go()}});
+    c.append($("div",{class:"inline"},inp,seg,$("button",{class:"send",onclick:go},"전송")));
+    if(hint)c.append($("div",{class:"hint"},hint));
+    c.append(err);inp.focus({preventScroll:true});
+  });
+}
+const fmtNum=v=>Number.isInteger(v)?String(v):String(Math.round(v*100)/100);
+
+async function runIntro(){
+  await bot("안녕하세요! CMC(컴퓨터 매개 커뮤니케이션) 수업 연구를 위한 설문에 와 주셔서 고마워요.");
+  await bot("이 연구는 메신저로 보낸 메시지에 답장이 없을 때, 기다린 시간과 ‘읽음’ 여부에 따라 사람들이 그 상황을 어떻게 느끼고 해석하는지 알아보려고 해요.");
+  await bot("진행은 이렇게 돼요.\n① 저와 대화하며 기본 질문 몇 가지에 답하기\n② 메신저 화면 4가지 상황을 보고, 상황마다 친구·연인·가족·교수님 네 관계에 대해 짧게 답하기 (질문 2개씩)\n\n전체 약 7~10분 걸려요.");
+  await bot("수집하는 정보는 나이, 성별, 전공, 평소 답장 습관, 그리고 설문 응답이에요. 이름과 학번은 받지 않고, 응답은 무작위로 만든 익명 ID로만 저장돼요.\n\n모은 응답은 이 수업 연구의 분석에만 쓰이고, 원하지 않으면 언제든 창을 닫아 중단할 수 있어요.");
+  await bot("위 내용을 읽고 연구 참여에 동의하시나요?",500);
+  const ok=await askChoice([{label:"동의합니다",value:true,primary:true},{label:"동의하지 않습니다",value:false}]);
+  if(!ok){
+    await bot("알겠습니다. 응답은 저장되지 않았고 설문을 여기서 마칠게요. 시간 내 주셔서 고마워요.");
+    composer().append($("div",{class:"hint"},"설문이 종료되었습니다. 이 창을 닫으셔도 됩니다."));
+    S.phase="declined";return;
+  }
+  S.consentAt=new Date().toISOString();
+  // Make sure this view can actually save before asking anything else.
+  const t=$("div",{class:"hint"},"저장 환경을 확인하고 있어요…");composer().append(t);
+  const chk=await checkSaving();t.remove();
+  if(!chk.ok){await bot(chk.message);composer().append($("div",{class:"hint"},"설문을 진행할 수 없어 종료되었습니다."));return}
+
+  await bot("고마워요! 먼저 기본 질문을 드릴게요.\n나이를 숫자로 입력해 주세요. (만 나이)");
+  S.demo.age=await askText({id:"in-age",type:"int",placeholder:"예: 21",validate:v=>{
+    if(!/^\d{1,3}$/.test(v))return{error:"나이를 숫자로만 입력해 주세요."};
+    const n=+v;if(n<15||n>99)return{error:"15에서 99 사이의 숫자로 입력해 주세요."};
+    return{value:n,display:n+"세"};}});
+  await bot("성별을 골라 주세요.");
+  S.demo.gender=await askChoice([{label:"여성",value:"여성"},{label:"남성",value:"남성"},{label:"응답하지 않음",value:"응답하지 않음"}]);
+  await bot("전공을 알려 주세요. (복수전공이면 주전공만 적어도 돼요)");
+  S.demo.major=await askText({id:"in-major",placeholder:"예: 경영학",validate:v=>{
+    if(!v)return{error:"전공을 입력해 주세요."};if(v.length>40)return{error:"40자 이내로 입력해 주세요."};return{value:v,display:v};}});
+  await bot("평소에 메시지를 받으면 보통 얼마나 지나서 답장하나요?\n숫자를 쓰고 단위를 골라 주세요.");
+  S.demo.replyHabit=await askDuration({id:"in-habit",allowZero:true,hint:"바로 답장하는 편이면 0을 입력하세요."});
+  await bot("이제 상대별로 여쭤볼게요. 내가 메시지를 보냈을 때, 답장이 얼마나 늦어지면 신경 쓰이기 시작하나요?");
+  await bot("지금 연인처럼 해당하는 사람이 없다면, 그런 사람이 한 명 있다고 가정하고 답해 주세요.",600);
+  S.demo.threshold={};
+  for(const r of RELS){
+    await bot("‘"+r.label+"’에게 보냈을 때는요?",500);
+    S.demo.threshold[r.key]=await askDuration({id:"in-thr-"+r.key,allowZero:false});
+  }
+  await bot("기본 질문은 끝났어요! 이제부터는 실제 메신저 화면이 나와요. 화면 속 메시지는 응답자 본인이 보낸 것이고, 아래 설문에 답하면 돼요.");
+  await bot("상황은 모두 4가지이고, 각각 앞 상황과 이어지지 않는 별개의 장면이에요.",500);
+  await askChoice([{label:"메신저 상황 시작하기",value:true,primary:true}]);
+  S.phase="scenario";S.idx=0;S.scenarioStartedAt=new Date().toISOString();
+  scenarioScreen();
+}
+
+async function checkSaving(){
+  if(store.get(DONE_KEY))return{ok:false,message:"이 기기에서는 이미 응답을 제출하셨어요. 참여해 주셔서 감사합니다!"};
+  const fail="지금은 응답을 저장할 서버에 연결할 수 없어서 설문을 진행할 수 없어요. 인터넷 연결을 확인한 뒤 페이지를 새로고침해 주세요. 문제가 계속되면 연구자에게 알려 주세요.";
+  if(!ENDPOINT)return{ok:false,message:fail};
+  try{const r=await callEndpoint("GET");if(!r||r.ok!==true)return{ok:false,message:fail}}catch(e){return{ok:false,message:fail}}
+  return{ok:true};
+}
+
+/* ================= SCENARIO: messenger + survey sheet ================= */
+function scenarioScreen(){
+  app.innerHTML="";
+  const t=TRIALS[S.idx],s=t.s,r=t.r,key=trialKey(S.idx);
+  const ans=S.trials[key]||(S.trials[key]={concern:null,reason:null,other:""});
+  const scr=$("section",{class:"screen",id:"scenario"});
+
+  // phone
+  const phone=$("div",{class:"phone","aria-label":"메신저 화면: "+r.contact+"에게 보낸 메시지"});
+  phone.append(
+    $("div",{class:"status"},$("span",null,s.nowTime),$("span",{class:"right"},$("span",null,s.nowDate),$("span",{html:ICON.battery,"aria-hidden":"true"}))),
+    $("header",{class:"chatbar"},$("span",{html:ICON.back,"aria-hidden":"true"}),$("span",{class:"title fade",key:S.idx},r.contact),$("span",{html:ICON.search,"aria-hidden":"true"}),$("span",{html:ICON.menu,"aria-hidden":"true"})),
+    $("div",{class:"chatarea"},
+      $("div",{class:"daypill"},s.sentDay),
+      $("div",{class:"row me fade"},
+        $("div",{class:"meta"},s.read?null:$("span",{class:"unread","aria-label":"읽지 않음"},"1"),$("span",null,s.sentTime)),
+        $("div",{class:"bubble"},r.msg))),
+    $("div",{class:"fakeinput","aria-hidden":"true"},$("span",{html:ICON.plus}),$("span",null,"메시지 입력")));
+
+  // sheet
+  const sheet=$("form",{class:"sheet",novalidate:true,onsubmit:e=>{e.preventDefault();next()}});
+  const done=S.idx;
+  const prog=$("div",{class:"progress"},
+    $("div",{class:"top"},$("b",null,"상황 "+s.n+" / 4"),$("span",null,(S.idx+1)+" / "+TRIALS.length)),
+    $("div",{class:"track","aria-hidden":"true"},$("i",{style:"width:"+(done/TRIALS.length*100)+"%"})),
+    $("div",{class:"rels"},RELS.map((x,i)=>{const ri=RELS.indexOf(r);return $("span",{class:"rel"+(i<ri?" done":"")+(i===ri?" now":"")},(i<ri?"✓ ":"")+x.label)})));
+  sheet.append(prog);
+  if(RELS.indexOf(r)===0)sheet.append($("div",{class:"notice"},s.n===1?"위 메신저 화면을 보고 답해 주세요. 상대가 바뀌면 상단 이름과 말투만 달라져요.":"새로운 상황이에요. 앞 상황과 이어지지 않는 별개의 장면으로 봐 주세요."));
+  sheet.append($("div",{class:"sit"},
+    $("div",{class:"sit-time"},
+      $("div",null,$("span",null,"보낸 시각"),$("b",null,s.sentShort)),
+      $("div",{class:"arrow","aria-hidden":"true"},"→"),
+      $("div",null,$("span",null,"지금"),$("b",null,"오늘 "+s.nowTime))),
+    $("div",{class:"sit-sum"},$("b",null,s.ko+"째 답장 없음")," · ",s.read?"상대가 메시지를 읽었어요 (‘1’이 사라짐)":"상대가 아직 읽지 않았어요 (‘1’이 남아 있음)")));
+  sheet.append($("p",{class:"guide",style:"margin:0"},$("b",null,r.label)," 한 사람을 떠올려 주세요. ",r.key==="partner"?"지금 연인이 없다면 있다고 가정해도 돼요. ":"","그 사람에게 위 메시지를 보낸 지 ",$("b",null,s.ko+(s.elapsed==="2h"?"이":"가"))," 지났는데, ",s.read?"읽고도 ":"아직 읽지 않았고 ","답장이 없어요."));
+
+  // Q1
+  const q1=$("fieldset",{class:"q",style:"border:0;margin:0;padding:16px 0 0;border-top:1px solid var(--line)"});
+  const scale=$("div",{class:"scale",role:"radiogroup","aria-labelledby":"q1h"});
+  for(let i=1;i<=10;i++){
+    scale.append($("button",{type:"button",role:"radio","aria-checked":String(ans.concern===i),"aria-label":i+"점",onclick:()=>{ans.concern=i;scale.querySelectorAll("button").forEach((b,j)=>b.setAttribute("aria-checked",String(j+1===i)));clearErr(q1)}},String(i)));
+  }
+  q1.append($("h3",{id:"q1h"},$("span",{class:"ctx"},"보낸 지 "+s.ko+", "+(s.read?"읽었지만":"아직 읽지 않았고")+" 답장이 없는"),"이 상황이 얼마나 신경 쓰이나요?"),scale,$("div",{class:"ends"},$("span",null,"1 전혀 신경 쓰이지 않음"),$("span",null,"10 매우 신경 쓰임")));
+
+  // Q2
+  const q2=$("fieldset",{class:"q",style:"border:0;margin:0;padding:16px 0 0;border-top:1px solid var(--line)"});
+  const opts=$("div",{class:"opts",role:"radiogroup","aria-labelledby":"q2h"});
+  const other=$("input",{class:"other",id:"other-"+key,type:"text",maxlength:"200",placeholder:"이유를 직접 적어 주세요",value:ans.other,hidden:ans.reason!=="other"});
+  other.addEventListener("input",()=>{ans.other=other.value;if(other.value.trim())clearErr(q2)});
+  REASONS[s.read?"read":"unread"].forEach(([code,label])=>{
+    opts.append($("button",{type:"button",class:"opt",role:"radio","aria-checked":String(ans.reason===code),onclick:()=>{
+      ans.reason=code;opts.querySelectorAll(".opt").forEach(b=>b.setAttribute("aria-checked",String(b.dataset.code===code)));
+      other.hidden=code!=="other";if(code==="other")other.focus();clearErr(q2);},"data-code":code},$("span",{class:"dot"}),$("span",null,label)));
+  });
+  q2.append($("h3",{id:"q2h"},"답장이 없는 가장 그럴듯한 이유는 무엇이라고 생각하나요?",$("small",null,"하나만 선택")),opts,other);
+
+  const last=S.idx===TRIALS.length-1;
+  const status=$("div",{class:"msg",role:"status"});
+  const nav=$("div",{class:"nav"},
+    S.idx>0?$("button",{type:"button",class:"btn ghost",onclick:()=>{S.idx--;scenarioScreen()}},"이전"):null,
+    $("button",{type:"submit",class:"btn main",id:"nextbtn"},last?"제출하기":"다음"));
+  sheet.append(q1,q2,nav,status);
+  scr.append(phone,sheet);app.append(scr);
+  window.scrollTo({top:0,behavior:reduce?"auto":"smooth"});
+
+  function clearErr(q){q.classList.remove("invalid");const e=q.querySelector(".qerr");if(e)e.remove()}
+  function setErr(q,msg){clearErr(q);q.classList.add("invalid");q.append($("div",{class:"qerr",role:"alert"},msg))}
+  async function next(){
+    let bad=null;
+    if(ans.concern==null){setErr(q1,"1~10점 중 하나를 골라 주세요.");bad=bad||q1}
+    if(!ans.reason){setErr(q2,"가장 그럴듯한 이유를 하나 골라 주세요.");bad=bad||q2}
+    else if(ans.reason==="other"&&!ans.other.trim()){setErr(q2,"‘기타’를 골랐다면 이유를 직접 적어 주세요.");bad=bad||q2}
+    if(bad){bad.scrollIntoView({behavior:reduce?"auto":"smooth",block:"center"});return}
+    if(!last){S.idx++;scenarioScreen();return}
+    const btn=document.getElementById("nextbtn");btn.disabled=true;btn.textContent="저장 중…";status.className="msg";status.textContent="";
+    const r=await submit();
+    if(r.ok){S.phase="done";endScreen()}
+    else{btn.disabled=false;btn.textContent="다시 제출하기";status.className="msg bad";status.textContent=r.message}
+  }
+}
+const trialKey=i=>"s"+TRIALS[i].s.n+"_"+TRIALS[i].r.key;
+
+/* ================= submit ================= */
+function buildRecord(){
+  const trials=TRIALS.map((t,i)=>{const a=S.trials[trialKey(i)];const list=REASONS[t.s.read?"read":"unread"];
+    return{order:i+1,situation:t.s.n,elapsed:t.s.elapsed,read_status:t.s.read?"read":"unread",relation:t.r.key,
+      concern:a.concern,reason_code:a.reason,reason_label:(list.find(x=>x[0]===a.reason)||[])[1]||"",reason_other:a.reason==="other"?a.other.trim():""}});
+  const now=new Date();
+  return{anon_id:S.anonId,version:VERSION,consent:true,consent_at:S.consentAt,started_at:S.startedAt,submitted_at:now.toISOString(),
+    duration_sec:Math.round((now-new Date(S.startedAt))/1000),
+    age:S.demo.age,gender:S.demo.gender,major:S.demo.major,reply_habit:S.demo.replyHabit,threshold:S.demo.threshold,trials};
+}
+async function submit(){
+  const rec=buildRecord();
+  for(let attempt=0;attempt<2;attempt++){
+    try{
+      const r=await callEndpoint("POST",rec);
+      if(r&&r.ok===true&&r.anon_id===rec.anon_id){store.set(DONE_KEY,rec.anon_id);return{ok:true}}
+      if(r&&r.error==="invalid")return{ok:false,message:"응답 형식에 문제가 있어 저장하지 못했어요. 연구자에게 알려 주세요."};
+    }catch(e){}
+    if(attempt===0)await new Promise(r=>setTimeout(r,800+Math.random()*800));
+  }
+  return{ok:false,message:"응답이 아직 저장되지 않았어요. 인터넷 연결을 확인한 뒤 ‘다시 제출하기’를 눌러 주세요. 입력한 답은 그대로 남아 있어요."};
+}
+
+/* ================= end ================= */
+function endScreen(){
+  app.innerHTML="";
+  app.append($("section",{class:"screen"},$("div",{class:"center"},
+    $("div",{class:"mark",html:ICON.check,"aria-hidden":"true"}),
+    $("h1",null,"참여해 주셔서 감사합니다"),
+    $("p",null,"응답이 안전하게 저장되었어요. 이제 이 창을 닫으셔도 됩니다."),
+    $("div",{class:"idbox"},"응답 ID "+S.anonId),
+    $("p",{style:"font-size:13px"},"나중에 응답 삭제를 원하면 이 ID를 연구자에게 알려 주세요."))));
+  window.scrollTo(0,0);
+}
+
+/* ================= boot ================= */
+function start(){S.phase="intro";introScreen()}
+if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start);else start();
+})();
+</script>
+</body>
+</html>
