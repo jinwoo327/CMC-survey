@@ -41,6 +41,8 @@ button{cursor:pointer;touch-action:manipulation}
 .app.bare{background:transparent}
 .screen{display:flex;flex-direction:column;flex:1;min-height:0}
 .nojs{max-width:480px;margin:40px auto;padding:0 16px;text-align:center}
+/* shown only when js/survey-text.js has a mistake */
+.texterr{background:var(--danger-soft);color:var(--danger);border-bottom:2px solid var(--danger);font-size:13px;line-height:1.5;padding:8px 16px}
 
 /* ---------- language picker + resume card ---------- */
 .dialog-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:24px 16px calc(24px + env(safe-area-inset-bottom,0px))}
