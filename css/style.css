@@ -113,11 +113,12 @@ button{cursor:pointer;touch-action:manipulation}
 .hint{font-size:12.5px;color:var(--muted)}
 .err{font-size:13px;color:var(--danger)}
 .err:empty{display:none}
-.sugs{display:flex;flex-wrap:wrap;gap:6px}
+/* country suggestions float over the chat (anchored to .dock) instead of growing the composer and pushing the chat up */
+.sugs{position:absolute;left:12px;right:12px;bottom:calc(100% + 8px);z-index:3;display:flex;flex-wrap:wrap;gap:6px;padding:8px;background:var(--paper);border:1px solid var(--line);border-radius:16px;box-shadow:0 10px 28px -8px var(--shadow);max-height:min(176px,40vh);max-height:min(176px,40dvh);overflow-y:auto;overscroll-behavior:contain}
 .sugs:empty{display:none}
 .sug{border:1px solid var(--accent);background:var(--accent-soft);color:var(--ink);border-radius:12px;padding:8px 12px;font-size:14px;min-height:44px;text-align:left;max-width:100%}
 @media (max-height:480px){
-  .sugs{flex-wrap:nowrap;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none;margin-inline:-16px;padding-inline:16px}
+  .sugs{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-width:none}
   .sugs::-webkit-scrollbar{display:none}
   .sug{flex:none;white-space:nowrap}
 }
