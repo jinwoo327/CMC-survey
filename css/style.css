@@ -124,20 +124,20 @@ button{cursor:pointer;touch-action:manipulation}
 
 /* ---------- scenario ---------- */
 #scenario{background:var(--paper)}
-.phone{background:var(--chat-bg);position:sticky;top:0;z-index:3;box-shadow:0 8px 14px -10px var(--shadow)}
+/* phones: the whole messenger mock stays pinned on top at ~45% of the screen */
+.phone{background:var(--chat-bg);position:sticky;top:0;z-index:3;box-shadow:0 8px 14px -10px var(--shadow);display:flex;flex-direction:column;height:min(45vh,420px);height:min(45svh,420px)}
 .status{display:flex;justify-content:space-between;align-items:center;padding:6px 16px 4px;background:var(--bar);color:var(--bar-fg);font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums}
 .status .right{display:flex;align-items:center;gap:6px;font-weight:500}
 .status svg{width:22px;height:12px}
-.phone .chatbar{min-height:40px;padding-block:4px}
-.phone .chatarea{min-height:0;padding:4px 14px 8px;gap:6px;justify-content:flex-end}
-.phone .daypill{margin:0 0 2px}
-.phone .status,.phone .fakeinput{display:none}
+.phone .chatbar{min-height:46px;padding-block:6px}
+.phone .chatarea{flex:1;min-height:0;overflow:hidden;padding:12px 16px;gap:8px;justify-content:flex-end}
+.phone .daypill{margin:0 0 4px}
 .fakeinput{display:flex;gap:8px;align-items:center;padding:8px 16px;background:var(--paper);border-top:1px solid var(--line);pointer-events:none}
 .fakeinput>span{display:grid;place-items:center;opacity:.6}
 .fakeinput>span:last-child{flex:1;display:block;background:var(--soft);border-radius:18px;padding:6px 12px;font-size:13px;color:var(--muted)}
 .fakeinput svg{width:20px;height:20px;stroke:var(--muted);fill:none;stroke-width:1.8;stroke-linecap:round}
 #scenario.kbd .phone{position:relative}
-@media (max-height:559px){.phone{position:relative}}
+@media (max-height:479px){.phone{position:relative}}
 .fade{animation:fade .35s ease}
 @keyframes fade{from{opacity:.2;transform:translateY(4px)}to{opacity:1;transform:none}}
 .pulse{animation:pulse .9s ease-out}
@@ -206,11 +206,9 @@ button{cursor:pointer;touch-action:manipulation}
 @media (min-width:880px),(min-width:640px) and (max-height:500px){
   .app.wide{max-width:1040px}
   #scenario{display:grid;grid-template-columns:minmax(300px,380px) minmax(0,1fr);column-gap:32px;align-items:start;padding:24px}
-  #scenario .phone,#scenario.kbd .phone{position:sticky;top:24px;border:1px solid var(--line);border-radius:28px;overflow:hidden;box-shadow:0 12px 30px -16px var(--shadow)}
-  .phone .status,.phone .fakeinput{display:flex}
-  .phone .chatbar{min-height:46px;padding-block:6px}
+  #scenario .phone,#scenario.kbd .phone{position:sticky;top:24px;height:auto;border:1px solid var(--line);border-radius:28px;overflow:hidden;box-shadow:0 12px 30px -16px var(--shadow)}
   .phone .chatbar .deco{opacity:.55}
-  .phone .chatarea{min-height:170px;padding:14px 16px;gap:8px}
+  .phone .chatarea{min-height:170px;padding:14px 16px}
   .phone .daypill{margin:4px 0 6px}
   #scenario .sheet{padding:0 0 24px}
 }
