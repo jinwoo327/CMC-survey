@@ -25,6 +25,24 @@
   --accent:#AFC3E6; --accent-fg:#111821; --accent-soft:#273246; --danger:#F08A80; --danger-soft:#3A2321;
   --ok:#7CCB9C; --hl:#7A6414; --shadow:rgba(0,0,0,.5); color-scheme:dark;
 }
+/* read-status colours (blue = read/Seen, orange = not read/Sent) + "changed from the previous question" marks */
+:root{--st-read:#1554C2;--st-read-soft:#E2ECFD;--st-unread:#B54708;--st-unread-soft:#FDEBDC;--chg:#FFE27A;--chg-ring:#E0A100}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--st-read:#8DB5FF;--st-read-soft:#1C2C4A;--st-unread:#FFB27A;--st-unread-soft:#43281A;--chg:#6B5310;--chg-ring:#E8B83A}}
+:root[data-theme="dark"]{--st-read:#8DB5FF;--st-read-soft:#1C2C4A;--st-unread:#FFB27A;--st-unread-soft:#43281A;--chg:#6B5310;--chg-ring:#E8B83A}
+/* English version: Instagram-DM-like messenger instead of the KakaoTalk-like one */
+:root.ig{
+  --chat-bg:#FFFFFF; --mine:#7B3FF2; --mine-fg:#FFFFFF; --theirs:#EFEFEF; --theirs-fg:#0A0A0A;
+  --chat-meta:#737373; --divider:transparent; --divider-fg:#737373; --bar:#FFFFFF; --bar-fg:#0A0A0A;
+  --f-body:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans KR",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root.ig:not([data-theme="light"]){
+  --chat-bg:#000000; --mine:#8B5CF6; --mine-fg:#FFFFFF; --theirs:#262626; --theirs-fg:#F5F5F5;
+  --chat-meta:#A8A8A8; --divider-fg:#A8A8A8; --bar:#000000; --bar-fg:#F5F5F5;
+}}
+:root.ig[data-theme="dark"]{
+  --chat-bg:#000000; --mine:#8B5CF6; --mine-fg:#FFFFFF; --theirs:#262626; --theirs-fg:#F5F5F5;
+  --chat-meta:#A8A8A8; --divider-fg:#A8A8A8; --bar:#000000; --bar-fg:#F5F5F5;
+}
 html,body{height:100%}
 body{margin:0}
 :root{padding-top:env(safe-area-inset-top,0px)}
@@ -230,3 +248,57 @@ button{cursor:pointer;touch-action:manipulation}
 .mark svg{width:34px;height:34px;stroke:#191919;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
 
 @media (prefers-reduced-motion: reduce){.bubble.typing i{animation:none}.fade,.pulse,.rel.now.pulse{animation:none!important}.track i{transition:none}}
+
+/* ---------- read status colour + "changed" marks ---------- */
+.st{font-weight:700;border-radius:4px;padding:0 3px;box-decoration-break:clone;-webkit-box-decoration-break:clone}
+.st.read{color:var(--st-read);background:var(--st-read-soft)}
+.st.unread{color:var(--st-unread);background:var(--st-unread-soft)}
+.chg{background:var(--chg);color:var(--ink);border-radius:4px;box-shadow:0 0 0 2px var(--chg);box-decoration-break:clone;-webkit-box-decoration-break:clone}
+.st.chg{box-shadow:0 0 0 2px var(--chg-ring)}
+.sit-sum b.chg,.guide b.chg{color:var(--ink)}
+.chatbar .title.chg,.daypill.chg{background:var(--chg);color:#1B1B1B;padding-inline:6px}
+.chatbar .title.chg{flex:0 1 auto;margin-right:auto}
+.meta .chg{color:#1B1B1B}
+.chg-in{animation:chgin 1.2s ease-out}
+@keyframes chgin{0%,35%{box-shadow:0 0 0 7px var(--chg-ring)}100%{box-shadow:0 0 0 2px var(--chg)}}
+.st.chg-in{animation-name:chginst}
+@keyframes chginst{0%,35%{box-shadow:0 0 0 7px var(--chg-ring)}100%{box-shadow:0 0 0 2px var(--chg-ring)}}
+.changes{border:1.5px solid var(--chg-ring);border-radius:12px;padding:8px 12px;background:var(--paper);scroll-margin-top:12px}
+.chg-h{font-size:12.5px;font-weight:700;color:var(--muted);margin-bottom:4px;display:flex;align-items:center;gap:6px}
+.chg-h::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--chg-ring);flex:none}
+.changes ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px}
+.changes li{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;font-size:14px}
+.chg-k{color:var(--muted);font-size:13px;min-width:7.5em}
+.chg-v{display:inline-flex;flex-wrap:wrap;align-items:baseline;gap:6px}
+.chg-v s{color:var(--muted);text-decoration-thickness:1.5px}
+.chg-v s .st{opacity:.7}
+.chg-v .arr{color:var(--muted)}
+.chg-v b{padding-inline:4px}
+
+/* ---------- Instagram-DM-like messenger (English) ---------- */
+.ig .chatbar{border-bottom:1px solid var(--line)}
+.ig .bubble{border-radius:20px;padding:9px 14px}
+.ig .me .bubble{background:linear-gradient(135deg,#A033E8 0%,#6A3DF5 55%,#3B6CF6 100%);color:#fff;border-radius:20px;border-bottom-right-radius:6px}
+.ig .them .bubble{border-radius:20px;border-bottom-left-radius:6px}
+.ig .avatar{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#F9A23B,#E1306C 55%,#833AB4);align-self:flex-end}
+.ig .avatar svg{width:18px;height:18px}
+.ig .daypill{background:none;font-weight:600;font-size:12px;white-space:normal;text-align:center;padding:2px 8px}
+.ig .chip.primary,.ig .send{background:#5B4BF5;border-color:#5B4BF5;color:#fff}
+.ig .mark{background:linear-gradient(135deg,#A033E8,#3B6CF6)}
+.ig .mark svg{stroke:#fff}
+.phone.ig .chatbar{gap:12px}
+.phone.ig .chatbar .title{flex:1}
+.phone.ig .chatbar .title.chg{flex:0 1 auto}
+.igav{width:30px;height:30px;border-radius:50%;flex:none;display:grid;place-items:center;font-weight:700;font-size:14px;color:#fff;background:linear-gradient(135deg,#F9A23B,#E1306C 55%,#833AB4)}
+.igmsg{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.igmsg .row{width:100%}
+.seen{font-size:12px;padding:1px 8px;border-radius:999px;margin-right:2px}
+.phone.ig .fakeinput{background:var(--chat-bg);border-top:0;padding:8px 12px 10px}
+.phone.ig .fakeinput>span.igbox{flex:1;display:flex;align-items:center;gap:10px;opacity:1;background:var(--soft);border-radius:22px;padding:4px 12px 4px 4px;font-size:13px;color:var(--muted)}
+.igbox .cam{width:30px;height:30px;border-radius:50%;background:#3B6CF6;display:grid;place-items:center}
+.igbox .cam svg{stroke:#fff;width:18px;height:18px}
+.igbox .ph{flex:1}
+.igbox .ic{display:grid;place-items:center}
+@media (prefers-reduced-motion: reduce){.chg-in{animation:none!important}}
+.ig .daypill.chg{background:var(--chg);color:#1B1B1B}
+.sit-time b.chg{align-self:flex-start;padding-inline:4px;margin-left:-4px}

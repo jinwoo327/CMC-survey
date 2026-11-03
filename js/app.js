@@ -26,6 +26,11 @@ const UNIT_KEY={"분":"unitMin","시간":"unitHour","일":"unitDay"};
 const GENDERS=["여성","남성","응답하지 않음"];
 const GENDER_KEY={"여성":"genderF","남성":"genderM","응답하지 않음":"genderNone"};
 const NO_ANSWER="응답하지 않음";
+// Languages that get the Instagram-DM-style messenger (others keep the KakaoTalk-style one with the yellow "1").
+const IG_LANGS=["en"];
+// Languages that highlight what changed from the previous question (add "ko" to turn it on for Korean too).
+const CHG_LANGS=["en"];
+const isIG=()=>IG_LANGS.includes(S.lang);
 
 /* ================= state ================= */
 const S={phase:"pick",lang:"ko",anonId:makeId(),startedAt:new Date().toISOString(),demo:{},trials:{},idx:0};
@@ -55,7 +60,8 @@ const KEYS=("pickHeading pickSub pickKo pickEn pickGo hello about steps privacy 
   "notice1 noticeNew sentAt now phoneLabel unread fakeInput prev next submit saving savingHint resubmit submitInvalid submitFail "+
   "thanks saved respId deleteNote already resumeTitle resumeNote resumeGo resumeOther resumeGoOther resumeRestart "+
   "connecting connectingSec reconnecting slowServer retry errDetail serverFail ended errFormat errTimeout errNetwork errConfirm errOffline "+
-  "title chatTitle dayPill botName typing clockAM clockPM send newMsg").split(" ")
+  "title chatTitle dayPill botName typing clockAM clockPM send newMsg "+
+  "phoneSeen phoneUnseen chgTitle chgRel chgTime chgRead t2h t1d stRead stUnread liveChg").split(" ")
   .concat(...RELS.map(r=>["chip","contact","msg","think","thrAsk"].map(f=>"rel."+r.key+"."+f)),
     ...SITS.map(s=>["sentDay","sentTime","nowDate","nowTime","sentShort","nowShort","summary","guide","q1ctx"].map(f=>"sit"+s.n+"."+f)),
     ...Object.keys(REASONS).map(g=>REASONS[g].map(c=>"reason."+g+"."+c)));
@@ -72,9 +78,20 @@ function showTextErrors(){
 }
 function raw(k,lang){const v=TXT.T[lang||S.lang][k];if(v==null){textError("["+k+"] 항목이 없어요");return"["+k+"]"}return v}
 const fillT=(k,s,vars)=>window.SurveyText.fill(s,vars,name=>textError("["+k+"] {"+name+"} 자리에 넣을 값이 없어요"));
-// plain text ("**" markers dropped) / nodes with the **bold** parts as <b class=cls>
-const tx=(k,vars,lang)=>fillT(k,raw(k,lang).replace(/\*\*/g,""),vars);
-const rich=(k,vars,cls)=>raw(k).split(/\*\*(.+?)\*\*/).map((p,i)=>{p=fillT(k,p,vars);return i%2?$("b",cls?{class:cls}:null,p):p||null});
+// plain text (markers dropped) / nodes with the **bold** parts as <b class=cls>
+// and [[read:…]] / [[unread:…]] as <span class="st read|unread"> (read-status colour)
+const ST_RE=/\[\[(read|unread):(.+?)\]\]/g;
+const tx=(k,vars,lang)=>fillT(k,raw(k,lang).replace(/\*\*/g,"").replace(ST_RE,"$2"),vars);
+function rich(k,vars,cls){
+  const s=raw(k),out=[],re=/\*\*(.+?)\*\*|\[\[(read|unread):(.+?)\]\]/g;let i=0,m;
+  while((m=re.exec(s))){
+    if(m.index>i)out.push(fillT(k,s.slice(i,m.index),vars));
+    out.push(m[1]!=null?$("b",cls?{class:cls}:null,fillT(k,m[1],vars)):$("span",{class:"st "+m[2]},fillT(k,m[3],vars)));
+    i=re.lastIndex;
+  }
+  if(i<s.length)out.push(fillT(k,s.slice(i),vars));
+  return out;
+}
 const relTx=(key,f)=>tx("rel."+key+"."+f);
 
 const app=document.getElementById("app");
@@ -101,6 +118,11 @@ const ICON={
   check:'<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
   plus:'<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
   globe:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/></svg>',
+  phone:'<svg viewBox="0 0 24 24"><path d="M5 4h3.5l1.5 4-2 1.5a11 11 0 0 0 6.5 6.5l1.5-2 4 1.5V19a1 1 0 0 1-1 1A16 16 0 0 1 4 5a1 1 0 0 1 1-1z"/></svg>',
+  video:'<svg viewBox="0 0 24 24"><rect x="3" y="6.5" width="12.5" height="11" rx="2.5"/><path d="M15.5 10.5 21 7.5v9l-5.5-3"/></svg>',
+  camera:'<svg viewBox="0 0 24 24"><path d="M4 8.5h3l1.6-2.5h6.8L17 8.5h3v10H4z"/><circle cx="12" cy="13" r="3.2"/></svg>',
+  mic:'<svg viewBox="0 0 24 24"><rect x="9" y="3.5" width="6" height="11" rx="3"/><path d="M6 11.5a6 6 0 0 0 12 0M12 17.5V21"/></svg>',
+  image:'<svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="3"/><circle cx="9" cy="10" r="1.6"/><path d="M20.5 16l-5-5-8.5 8.5"/></svg>',
   battery:'<svg viewBox="0 0 26 13" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1" y="1.5" width="21" height="10" rx="2.5"/><rect x="3" y="3.5" width="14" height="6" rx="1" fill="currentColor" stroke="none"/><path d="M24 5v3"/></svg>'
 };
 
@@ -168,7 +190,7 @@ function pickerScreen(){
   app.append($("section",{class:"screen",id:"picker"},$("div",{class:"dialog-wrap"},card)));
   card.focus({preventScroll:true});
 }
-function setLang(v){S.lang=v;document.documentElement.lang=v;document.title=tx("title");store.set(LANG_KEY,v)}
+function setLang(v){S.lang=v;document.documentElement.lang=v;document.documentElement.classList.toggle("ig",IG_LANGS.includes(v));document.title=tx("title");store.set(LANG_KEY,v)}
 function chooseLang(v){
   setLang(v);
   if(store.get(DONE_KEY))return introScreen(async()=>{S.phase="done";await bot(tx("already"));composer().append(hintEl(tx("ended")))});
@@ -231,7 +253,8 @@ async function bot(text,delay){
   }
   const ty=$("div",{class:"row them"},$("div",{class:"bubble typing","aria-label":tx("typing")},$("i"),$("i"),$("i")));
   anchor=null;grp.stack.append(ty);if(pinned)follow();
-  await wait(delay??Math.min(1100,350+text.length*12));
+  const len=Array.isArray(text)?text.reduce((n,x)=>n+String(x&&x.textContent!=null?x.textContent:x||"").length,0):text.length;
+  await wait(delay??Math.min(1100,350+len*12));
   const row=$("div",{class:"row them"},$("div",{class:"bubble"},text),$("div",{class:"meta"},$("span",null,nowLabel())));
   ty.replaceWith(row);anchor=row;
   if(pinned)follow();else pill.hidden=false;
@@ -395,7 +418,7 @@ async function runIntro(){
   await review();
   await bot(tx("toScenario"));
   await bot(tx("fourSits"),500);
-  if(tx("oneHint"))await bot(tx("oneHint"));
+  if(tx("oneHint"))await bot(rich("oneHint"));
   await askChoice([{label:tx("startScen"),value:true,primary:true}]);
   S.idx=0;S.scenarioStartedAt=new Date().toISOString();
   startScenario();
@@ -487,18 +510,38 @@ function scenarioScreen(moved){
   const sit=f=>tx("sit"+s.n+"."+f).replace(/ (AM|PM)\b/g," $1");
   const ans=S.trials[key]||(S.trials[key]={concern:null,reason:null,other:""});
   const scr=$("section",{class:"screen",id:"scenario"});
+  // what differs from the previous question (shown as a box + yellow marks on every place it appears)
+  const prev=S.idx>0&&CHG_LANGS.includes(S.lang)?TRIALS[S.idx-1]:null;
+  const chg=prev?{rel:prev.r!==tr.r,time:prev.s.elapsed!==s.elapsed,read:prev.s.read!==s.read}:{};
+  const C=(cls,on)=>cls+(on?" chg":"");
+  const stLabel=read=>tx(read?"stRead":"stUnread");
+  const deco=k=>$("span",{class:"deco",html:ICON[k],"aria-hidden":"true"});
 
   // phone
-  const phone=$("div",{class:"phone",role:"group","aria-label":tx("phoneLabel",{contact:relTx(rk,"contact")})});
-  phone.append(
-    $("div",{class:"status"},$("span",null,sit("nowTime")),$("span",{class:"right"},$("span",null,sit("nowDate")),$("span",{html:ICON.battery,"aria-hidden":"true"}))),
-    $("header",{class:"chatbar"},$("span",{class:"deco",html:ICON.back,"aria-hidden":"true"}),$("span",{class:"title fade"},relTx(rk,"contact")),$("span",{class:"deco",html:ICON.search,"aria-hidden":"true"}),$("span",{class:"deco",html:ICON.menu,"aria-hidden":"true"})),
-    $("div",{class:"chatarea"},
-      $("div",{class:"daypill"},sit("sentDay")),
-      $("div",{class:"row me fade"},
-        $("div",{class:"meta"},s.read?null:$("span",{class:"unread","aria-label":tx("unread")},"1"),$("span",null,sit("sentTime"))),
-        $("div",{class:"bubble"},relTx(rk,"msg")))),
-    $("div",{class:"fakeinput","aria-hidden":"true"},$("span",{html:ICON.plus}),$("span",null,tx("fakeInput"))));
+  const ig=isIG(),contact=relTx(rk,"contact");
+  const phone=$("div",{class:"phone"+(ig?" ig":""),role:"group","aria-label":tx("phoneLabel",{contact})});
+  const statusBar=$("div",{class:"status"},$("span",null,sit("nowTime")),$("span",{class:"right"},$("span",null,sit("nowDate")),$("span",{html:ICON.battery,"aria-hidden":"true"})));
+  if(ig){
+    // Instagram-DM-like: round avatar + name, centred timestamp, gradient bubble, "Seen" / "Sent" under it
+    phone.append(statusBar,
+      $("header",{class:"chatbar"},deco("back"),$("span",{class:"igav fade","aria-hidden":"true"},(contact.trim()[0]||"?").toUpperCase()),
+        $("span",{class:C("title fade",chg.rel)},contact),deco("phone"),deco("video")),
+      $("div",{class:"chatarea"},
+        $("div",{class:C("daypill",chg.time)},sit("sentShort")),
+        $("div",{class:"igmsg fade"},
+          $("div",{class:"row me"},$("div",{class:"bubble"},relTx(rk,"msg"))),
+          $("div",{class:C("seen st "+(s.read?"read":"unread"),chg.read)},tx(s.read?"phoneSeen":"phoneUnseen")))),
+      $("div",{class:"fakeinput","aria-hidden":"true"},$("span",{class:"igbox"},$("span",{class:"cam",html:ICON.camera}),$("span",{class:"ph"},tx("fakeInput")),$("span",{class:"ic",html:ICON.mic}),$("span",{class:"ic",html:ICON.image}))));
+  }else{
+    phone.append(statusBar,
+      $("header",{class:"chatbar"},deco("back"),$("span",{class:C("title fade",chg.rel)},contact),deco("search"),deco("menu")),
+      $("div",{class:"chatarea"},
+        $("div",{class:C("daypill",chg.time)},sit("sentDay")),
+        $("div",{class:"row me fade"},
+          $("div",{class:"meta"},s.read?null:$("span",{class:C("unread",chg.read),"aria-label":tx("unread")},"1"),$("span",{class:chg.time?"chg":null},sit("sentTime"))),
+          $("div",{class:"bubble"},relTx(rk,"msg")))),
+      $("div",{class:"fakeinput","aria-hidden":"true"},$("span",{html:ICON.plus}),$("span",null,tx("fakeInput"))));
+  }
 
   // sheet
   const sheet=$("form",{class:"sheet",novalidate:true,onsubmit:e=>{e.preventDefault();next()}});
@@ -507,14 +550,29 @@ function scenarioScreen(moved){
     $("div",{class:"top"},head,$("span",null,tx("progCount",{i:S.idx+1,total:TRIALS.length}))),
     $("div",{class:"track","aria-hidden":"true"},$("i",{style:"width:"+(S.idx/TRIALS.length*100)+"%"})),
     $("div",{class:"rels"},RELS.map((x,i)=>$("span",{class:"rel"+(i<ri?" done":"")+(i===ri?" now":"")},(i<ri?"✓ ":"")+relTx(x.key,"chip"))))));
-  if(ri===0)sheet.append($("div",{class:"notice"},tx(s.n===1?"notice1":"noticeNew")));
+  if(ri===0)sheet.append($("div",{class:"notice"},rich(s.n===1?"notice1":"noticeNew")));
+  // the time words are **bold** and the read status is [[read:…]]/[[unread:…]] in survey-text.js
+  const mark=el=>{if(chg.time)el.querySelectorAll("b:not(.who)").forEach(b=>b.classList.add("chg"));if(chg.read)el.querySelectorAll(".st").forEach(b=>b.classList.add("chg"));if(chg.rel)el.querySelectorAll(".who").forEach(b=>b.classList.add("chg"));return el};
   sheet.append($("div",{class:"sit"},
     $("div",{class:"sit-time"},
-      $("div",null,$("span",null,tx("sentAt")),$("b",null,sit("sentShort"))),
+      $("div",null,$("span",null,tx("sentAt")),$("b",{class:chg.time?"chg":null},sit("sentShort"))),
       $("div",{class:"arrow","aria-hidden":"true"},"→"),
       $("div",null,$("span",null,tx("now")),$("b",null,sit("nowShort")))),
-    $("div",{class:"sit-sum"},rich("sit"+s.n+".summary"))));
-  const guide=$("p",{class:"guide"},rich("rel."+rk+".think",null,"who")," ",rich("sit"+s.n+".guide"));
+    mark($("div",{class:"sit-sum"},rich("sit"+s.n+".summary")))));
+  let changes=null,chgSay=[];
+  if(prev){
+    const items=[];
+    if(chg.rel)items.push(["chgRel",$("span",null,relTx(prev.r.key,"chip")),$("b",{class:"chg"},relTx(rk,"chip")),relTx(rk,"chip")]);
+    if(chg.time)items.push(["chgTime",$("span",null,tx("t"+prev.s.elapsed)),$("b",{class:"chg"},tx("t"+s.elapsed)),tx("t"+s.elapsed)]);
+    if(chg.read)items.push(["chgRead",$("span",{class:"st "+(prev.s.read?"read":"unread")},stLabel(prev.s.read)),$("b",{class:"st chg "+(s.read?"read":"unread")},stLabel(s.read)),stLabel(s.read)]);
+    if(items.length){
+      changes=$("div",{class:"changes"},$("div",{class:"chg-h"},tx("chgTitle")),
+        $("ul",null,items.map(([k,from,to])=>$("li",null,$("span",{class:"chg-k"},tx(k)),$("span",{class:"chg-v"},$("s",null,from),$("span",{class:"arr","aria-hidden":"true"},"→"),to)))));
+      chgSay=items.map(([k,,,now])=>tx(k)+": "+now);
+      sheet.append(changes);
+    }
+  }
+  const guide=mark($("p",{class:"guide"},rich("rel."+rk+".think",null,"who")," ",rich("sit"+s.n+".guide")));
   sheet.append(guide);
 
   // Q1
@@ -524,7 +582,7 @@ function scenarioScreen(moved){
     scale.append($("button",{type:"button",role:"radio","aria-checked":String(ans.concern===i),"aria-label":tx("scaleLabel",{n:i}),onclick:()=>{
       ans.concern=i;scale.querySelectorAll("button").forEach((b,j)=>b.setAttribute("aria-checked",String(j+1===i)));clearErr(q1);saveProgress()}},String(i)));
   }
-  q1.append($("h3",{id:"q1h"},$("span",{class:"ctx"},tx("sit"+s.n+".q1ctx")),tx("q1")),scale,$("div",{class:"ends"},$("span",null,tx("anchorLow")),$("span",null,tx("anchorHigh"))));
+  q1.append($("h3",{id:"q1h"},mark($("span",{class:"ctx"},rich("sit"+s.n+".q1ctx"))),tx("q1")),scale,$("div",{class:"ends"},$("span",null,tx("anchorLow")),$("span",null,tx("anchorHigh"))));
 
   // Q2
   const q2=$("fieldset",{class:"q"});
@@ -550,10 +608,13 @@ function scenarioScreen(moved){
   sheet.addEventListener("focusout",e=>{if(e.target.tagName==="INPUT")scr.classList.remove("kbd")});
   scr.append(phone,sheet);app.append(scr);
 
-  place(phone,guide);
+  place(phone,changes||guide);
   head.focus({preventScroll:true});
-  announce(tx("live",{i:S.idx+1,total:TRIALS.length,name:relTx(rk,"chip")}));
-  if(moved){const w=guide.querySelector(".who");if(w)w.classList.add("pulse");sheet.querySelector(".rel.now").classList.add("pulse")}
+  announce(tx("live",{i:S.idx+1,total:TRIALS.length,name:relTx(rk,"chip")})+(chgSay.length?". "+tx("liveChg",{list:chgSay.join(", ")}):""));
+  if(moved){
+    const w=guide.querySelector(".who");if(w&&!w.classList.contains("chg"))w.classList.add("pulse");sheet.querySelector(".rel.now").classList.add("pulse");
+    scr.querySelectorAll(".chg").forEach(e=>e.classList.add("chg-in"));
+  }
 
   function clearErr(q){q.classList.remove("invalid");const e=q.querySelector(".qerr");if(e)e.remove()}
   function setErr(q,msg){clearErr(q);q.classList.add("invalid");q.append($("div",{class:"qerr",role:"alert"},msg))}

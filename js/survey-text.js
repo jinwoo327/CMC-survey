@@ -8,6 +8,9 @@ window.SURVEY_TEXT=String.raw`
 #    | …        바로 위 문장에 이어서, 줄을 바꿔 쓰기  ( | 만 쓰면 빈 줄 )
 #  {이름}       프로그램이 값을 채워 넣는 자리. 지우거나 철자를 바꾸지 마세요.
 #  **굵게**     굵은 글씨
+#  [[read:…]]   ‘읽음’ 색으로 강조 (파란색)      [[unread:…]]  ‘안 읽음’ 색으로 강조 (주황색)
+#               상황 문구(sit*.summary · guide · q1ctx)에서는 **굵게** = 지난 시간, [[…]] = 읽음 여부 로 써 주세요.
+#               직전 문항과 달라진 부분이 노랗게 표시될 때 이 표시를 기준으로 찾아요.
 #  # …          메모 (화면에 안 나와요)
 #
 #  - 비어 있어도 되는 항목은 "ko:" 처럼 내용 없이 두면 돼요 (예: 한국어 설문에는 국적 질문이 없어요).
@@ -398,7 +401,7 @@ en: There are 4 situations in total, and each one is a separate scene that doesn
 # 노란 ‘1’ 설명 — 영어 설문에만 나와요 (비워 두면 안 나와요)
 [oneHint]
 ko:
-en: One thing to know about this messenger: a small yellow “1” next to a message you sent means the other person hasn't read it yet. When they read it, the “1” disappears.
+en: One thing to know about this messenger: under the message you sent, [[unread:Sent]] means the other person hasn't read it yet. Once they open it, it changes to [[read:Seen]].
 
 [startScen]
 ko: 메신저 상황 시작하기
@@ -530,15 +533,15 @@ en: Today 3:10 PM
 
 [sit1.summary]
 ko: **2시간째 답장 없음** · 상대가 메시지를 읽었어요 (‘1’이 사라짐)
-en: **No reply for 2 hours** · They've read your message (the “1” has disappeared)
+en: **No reply for 2 hours** · [[read:They've read your message]] (it shows “Seen”)
 
 [sit1.guide]
 ko: 그 사람에게 이 메시지를 보낸 지 **2시간이** 지났는데, 읽고도 답장이 없어요.
-en: It's been **2 hours** since you sent them this message. They've read it, but there's no reply.
+en: It's been **2 hours** since you sent them this message. [[read:They've read it]], but there's no reply.
 
 [sit1.q1ctx]
 ko: 보낸 지 2시간, 읽었지만 답장이 없는
-en: Sent 2 hours ago · read, but no reply
+en: Sent **2 hours** ago · [[read:read]], but no reply
 
 [sit2.sentDay]
 ko: 2026년 10월 14일 수요일
@@ -566,15 +569,15 @@ en: Today 3:10 PM
 
 [sit2.summary]
 ko: **2시간째 답장 없음** · 상대가 아직 읽지 않았어요 (‘1’이 남아 있음)
-en: **No reply for 2 hours** · They haven't read it yet (the “1” is still showing)
+en: **No reply for 2 hours** · [[unread:They haven't read it yet]] (it still shows “Sent”)
 
 [sit2.guide]
 ko: 그 사람에게 이 메시지를 보낸 지 **2시간이** 지났는데, 아직 읽지 않았고 답장이 없어요.
-en: It's been **2 hours** since you sent them this message. They haven't read it yet, and there's no reply.
+en: It's been **2 hours** since you sent them this message. [[unread:They haven't read it yet]], and there's no reply.
 
 [sit2.q1ctx]
 ko: 보낸 지 2시간, 아직 읽지 않았고 답장이 없는
-en: Sent 2 hours ago · not read yet, no reply
+en: Sent **2 hours** ago · [[unread:not read yet]], no reply
 
 [sit3.sentDay]
 ko: 2026년 10월 13일 화요일
@@ -602,15 +605,15 @@ en: Today 3:10 PM
 
 [sit3.summary]
 ko: **하루째 답장 없음** · 상대가 아직 읽지 않았어요 (‘1’이 남아 있음)
-en: **No reply for a day** · They haven't read it yet (the “1” is still showing)
+en: **No reply for a day** · [[unread:They haven't read it yet]] (it still shows “Sent”)
 
 [sit3.guide]
 ko: 그 사람에게 이 메시지를 보낸 지 **하루가** 지났는데, 아직 읽지 않았고 답장이 없어요.
-en: It's been **a day** since you sent them this message. They haven't read it yet, and there's no reply.
+en: It's been **a day** since you sent them this message. [[unread:They haven't read it yet]], and there's no reply.
 
 [sit3.q1ctx]
 ko: 보낸 지 하루, 아직 읽지 않았고 답장이 없는
-en: Sent a day ago · not read yet, no reply
+en: Sent **a day** ago · [[unread:not read yet]], no reply
 
 [sit4.sentDay]
 ko: 2026년 10월 13일 화요일
@@ -638,15 +641,15 @@ en: Today 3:10 PM
 
 [sit4.summary]
 ko: **하루째 답장 없음** · 상대가 메시지를 읽었어요 (‘1’이 사라짐)
-en: **No reply for a day** · They've read your message (the “1” has disappeared)
+en: **No reply for a day** · [[read:They've read your message]] (it shows “Seen”)
 
 [sit4.guide]
 ko: 그 사람에게 이 메시지를 보낸 지 **하루가** 지났는데, 읽고도 답장이 없어요.
-en: It's been **a day** since you sent them this message. They've read it, but there's no reply.
+en: It's been **a day** since you sent them this message. [[read:They've read it]], but there's no reply.
 
 [sit4.q1ctx]
 ko: 보낸 지 하루, 읽었지만 답장이 없는
-en: Sent a day ago · read, but no reply
+en: Sent **a day** ago · [[read:read]], but no reply
 
 
 # ----------------------------------------------------------------------
@@ -763,11 +766,58 @@ en: {i} of {total} · {name}
 # 각 상황의 첫 문항에 나오는 안내 (notice1 = 상황 1, noticeNew = 상황 2~4)
 [notice1]
 ko: 메신저 화면을 보고 답해 주세요. 상대가 바뀌면 대화방 이름과 말투만 달라져요.
-en: Please answer based on the messenger screen. When the person changes, only the chat name and the tone of the message change. Remember: a “1” next to your message means it hasn't been read yet.
+en: Please answer based on the messenger screen. When the person changes, only the chat name and the tone of the message change. Remember: [[unread:Sent]] under your message means it hasn't been read yet, and [[read:Seen]] means it has.
 
 [noticeNew]
 ko: 새로운 상황이에요. 앞 상황과 이어지지 않는 별개의 장면으로 봐 주세요.
 en: This is a new situation. Please treat it as a separate scene, not a continuation of the previous one.
+
+# 영어 메신저(인스타그램 DM 느낌) 화면에서 내 메시지 아래에 나오는 읽음 표시
+[phoneSeen]
+ko: 읽음
+en: Seen
+
+[phoneUnseen]
+ko: 안 읽음
+en: Sent
+
+# 직전 문항과 달라진 점 상자 (지금은 영어 설문에만 나와요)
+[chgTitle]
+ko: 직전 문항과 달라진 점
+en: What changed from the previous question
+
+[chgRel]
+ko: 상대
+en: Person
+
+[chgTime]
+ko: 보낸 뒤 지난 시간
+en: Time since sent
+
+[chgRead]
+ko: 읽음 여부
+en: Read status
+
+[t2h]
+ko: 2시간
+en: 2 hours
+
+[t1d]
+ko: 하루
+en: 1 day
+
+[stRead]
+ko: 읽음
+en: Read (Seen)
+
+[stUnread]
+ko: 안 읽음
+en: Not read (Sent)
+
+# 화면 낭독기가 달라진 점을 읽는 말: {list} 자리에 "Person: Partner, Read status: Not read" 처럼 채워져요
+[liveChg]
+ko: 달라진 점: {list}
+en: Changed: {list}
 
 [sentAt]
 ko: 보낸 시각
@@ -787,7 +837,7 @@ en: Unread
 
 [fakeInput]
 ko: 메시지 입력
-en: Type a message
+en: Message...
 
 [prev]
 ko: 이전
