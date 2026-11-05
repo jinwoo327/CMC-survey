@@ -61,7 +61,7 @@ const KEYS=("pickHeading pickSub pickKo pickEn pickGo hello about steps privacy 
   "thanks saved respId deleteNote already resumeTitle resumeNote resumeGo resumeOther resumeGoOther resumeRestart "+
   "connecting connectingSec reconnecting slowServer retry errDetail serverFail ended errFormat errTimeout errNetwork errConfirm errOffline backWarn "+
   "title chatTitle dayPill botName typing clockAM clockPM send newMsg "+
-  "phoneSeen phoneUnseen chgTitle chgRel chgTime chgRead t2h t1d stRead stUnread liveChg").split(" ")
+  "phoneSeen phoneUnseen chgTitle chgRel chgTime chgRead t2h t1d stRead stUnread liveChg backBtn backSay").split(" ")
   .concat(...RELS.map(r=>["chip","contact","msg","think","thrAsk"].map(f=>"rel."+r.key+"."+f)),
     ...SITS.map(s=>["sentDay","sentTime","nowDate","nowTime","sentShort","nowShort","summary","guide","q1ctx"].map(f=>"sit"+s.n+"."+f)),
     ...Object.keys(REASONS).map(g=>REASONS[g].map(c=>"reason."+g+"."+c)));
@@ -298,6 +298,9 @@ function me(text){
 }
 function nowLabel(){const d=new Date(),h=d.getHours();return tx(h<12?"clockAM":"clockPM",{h:(h%12)||12,m:String(d.getMinutes()).padStart(2,"0")})}
 function composer(){return document.getElementById("composer")}
+// "← previous question" (basic questions only): the ask resolves with BACK instead of an answer
+const BACK={back:true};
+const backChip=(c,res)=>$("button",{type:"button",class:"chip quiet backq",onclick:()=>{c.innerHTML="";me(tx("backBtn"));res(BACK)}},tx("backBtn"));
 function showErr(err,msg,inp){err.textContent=msg;if(inp)inp.focus();err.scrollIntoView({block:"nearest"})}
 
 function askChoice(options,o={}){
@@ -306,12 +309,13 @@ function askChoice(options,o={}){
     if(o.hint)c.append(hintEl(o.hint));
     const chips=$("div",{class:"chips"});
     options.forEach(x=>chips.append($("button",{type:"button",class:"chip"+(x.primary?" primary":"")+(x.quiet?" quiet":""),onclick:()=>{c.innerHTML="";me(x.label);res(x.value)}},x.label)));
+    if(o.back)chips.append(backChip(c,res));
     c.append(chips);
     if(o.focus!==false)chips.querySelector("button").focus({preventScroll:true});
     settle();
   });
 }
-function askText({placeholder,type="text",validate,id,hint,label}){
+function askText({placeholder,type="text",validate,id,hint,label,back}){
   return new Promise(res=>{
     const c=composer();c.innerHTML="";
     const inp=$("input",{class:"field",id,type:"text",placeholder,autocomplete:"off",inputmode:type==="int"?"numeric":null,enterkeyhint:"send","aria-label":label});
@@ -320,11 +324,13 @@ function askText({placeholder,type="text",validate,id,hint,label}){
     inp.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.isComposing){e.preventDefault();go()}});
     c.append($("div",{class:"inline"},inp,$("button",{type:"button",class:"send",onclick:go},tx("send"))));
     if(hint)c.append(hintEl(hint));
-    c.append(err);autoFocus(inp);settle();
+    c.append(err);
+    if(back)c.append($("div",{class:"chips"},backChip(c,res)));
+    autoFocus(inp);settle();
   });
 }
 // No unit is preselected: a number > 0 needs an explicit unit; 0 (reply habit only) is stored as 0분.
-function askDuration({id,allowZero,hint}){
+function askDuration({id,allowZero,hint,back}){
   return new Promise(res=>{
     const c=composer();c.innerHTML="";
     let unit=null;
@@ -347,7 +353,9 @@ function askDuration({id,allowZero,hint}){
     inp.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.isComposing){e.preventDefault();go()}});
     c.append($("div",{class:"inline"},inp,seg,$("button",{type:"button",class:"send",onclick:go},tx("send"))));
     if(hint){const h=hintEl(hint);h.id=id+"-hint";inp.setAttribute("aria-describedby",h.id);c.append(h)}
-    c.append(err);autoFocus(inp);settle();
+    c.append(err);
+    if(back)c.append($("div",{class:"chips"},backChip(c,res)));
+    autoFocus(inp);settle();
   });
 }
 
@@ -365,7 +373,7 @@ function findCountries(raw){
   });
   return(out.some(x=>x.s<=1)?out.filter(x=>x.s<5):out).sort((a,b)=>a.s-b.s||b.n-a.n||a.i-b.i);
 }
-function askCountry(){
+function askCountry(back){
   return new Promise(res=>{
     const c=composer();c.innerHTML="";
     const sugs=$("div",{class:"sugs",id:"nat-sugs",role:"group","aria-label":tx("natGroup")});
@@ -392,7 +400,7 @@ function askCountry(){
     inp.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.isComposing){e.preventDefault();go()}});
     c.append($("label",{class:"sr",for:"in-nat"},tx("natLabel")),sugs,
       $("div",{class:"inline"},inp,$("button",{type:"button",class:"send",onclick:go},tx("send"))),
-      $("div",{class:"chips"},$("button",{type:"button",class:"chip",id:"nat-prefer",onclick:()=>pick(NO_ANSWER,tx("natPrefer"))},tx("natPrefer"))),
+      $("div",{class:"chips"},$("button",{type:"button",class:"chip",id:"nat-prefer",onclick:()=>pick(NO_ANSWER,tx("natPrefer"))},tx("natPrefer")),back?backChip(c,res):null),
       live,err);
     autoFocus(inp);settle();
   });
@@ -400,37 +408,41 @@ function askCountry(){
 
 /* ---------- the questions (each one re-askable from the review step) ---------- */
 const Q={
-  async age(again){
+  async age(again,back){
     await bot(tx(again?"ageAgain":"age"));
-    S.demo.age=await askText({id:"in-age",type:"int",placeholder:tx("agePh"),label:tx("editAge"),validate:v=>{
+    return set("age",await askText({id:"in-age",type:"int",placeholder:tx("agePh"),label:tx("editAge"),back,validate:v=>{
       v=v.normalize("NFKC");
       if(!/^\d+$/.test(v))return{error:tx("ageErrNum")};
       const n=+v;if(n<15||n>99)return{error:tx("ageErrRange")};
-      return{value:n,display:tx("ageEcho",{n})};}});
+      return{value:n,display:tx("ageEcho",{n})};}}));
   },
-  async gender(){
+  async gender(again,back){
     await bot(tx("gender"));
-    S.demo.gender=await askChoice(GENDERS.map(g=>({label:tx(GENDER_KEY[g]),value:g})));
+    return set("gender",await askChoice(GENDERS.map(g=>({label:tx(GENDER_KEY[g]),value:g})),{back}));
   },
-  async nationality(){
+  async nationality(again,back){
     await bot(tx("nat"));
-    S.demo.nationality=await askCountry();
+    return set("nationality",await askCountry(back));
   },
-  async major(){
+  async major(again,back){
     await bot(tx("major"));
-    S.demo.major=await askText({id:"in-major",placeholder:tx("majorPh"),label:tx("editMajor"),validate:v=>{
-      if(!v)return{error:tx("majorErrEmpty")};if(v.length>40)return{error:tx("majorErrLong")};return{value:v,display:v};}});
+    return set("major",await askText({id:"in-major",placeholder:tx("majorPh"),label:tx("editMajor"),back,validate:v=>{
+      if(!v)return{error:tx("majorErrEmpty")};if(v.length>40)return{error:tx("majorErrLong")};return{value:v,display:v};}}));
   },
-  async habit(){
+  async habit(again,back){
     await bot(tx("habit"));
-    S.demo.replyHabit=await askDuration({id:"in-habit",allowZero:true,hint:tx("habitHint")});
+    return set("replyHabit",await askDuration({id:"in-habit",allowZero:true,hint:tx("habitHint"),back}));
   },
-  async thr(r,again){
+  async thr(r,again,back){
     if(again)await bot(tx("thrAgain"));
     await bot(relTx(r.key,"thrAsk"),500);
-    S.demo.threshold[r.key]=await askDuration({id:"in-thr-"+r.key,allowZero:false});
+    const v=await askDuration({id:"in-thr-"+r.key,allowZero:false,back});
+    if(v===BACK)return BACK;
+    S.demo.threshold[r.key]=v;
   }
 };
+// store an answer unless the respondent chose "← previous question"
+function set(k,v){if(v===BACK)return BACK;S.demo[k]=v}
 
 async function runIntro(){
   await bot(tx("hello"));
@@ -442,15 +454,19 @@ async function runIntro(){
   ensureGuard();  // from here on a single Back would throw answers away (see the popstate listener)
   if(!await serverGate())return;
 
-  await Q.age();
-  await Q.gender();
-  if(S.lang==="en")await Q.nationality();
-  await Q.major();
-  await Q.habit();
-  await bot(tx("thrIntro"));
-  await bot(tx("thrAssume"),600);
+  // basic questions in order; every one after the first offers "← previous question"
   S.demo.threshold={};
-  for(const r of RELS)await Q.thr(r);
+  let thrIntroShown=false;
+  const steps=[b=>Q.age(b,false),b=>Q.gender(b,true)]
+    .concat(S.lang==="en"?[b=>Q.nationality(b,true)]:[],[b=>Q.major(b,true),b=>Q.habit(b,true)],
+      RELS.map((r,i)=>async()=>{
+        if(i===0&&!thrIntroShown){thrIntroShown=true;await bot(tx("thrIntro"));await bot(tx("thrAssume"),600)}
+        return Q.thr(r,false,true);
+      }));
+  for(let i=0,again=false;i<steps.length;){
+    if(await steps[i](again)===BACK){i=Math.max(0,i-1);again=true;await bot(tx("backSay"),400)}
+    else{i++;again=false}
+  }
   await review();
   await bot(tx("toScenario"));
   await bot(tx("fourSits"),500);

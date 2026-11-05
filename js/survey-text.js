@@ -382,6 +382,15 @@ en: Usual reply time
 ko: 신경 쓰이는 때 · {name}
 en: Late reply · {name}
 
+# 기본 질문 중에 잘못 입력했을 때 직전 질문으로 돌아가는 버튼과, 누른 뒤 안내봇이 하는 말
+[backBtn]
+ko: ← 이전 질문으로
+en: ← Previous question
+
+[backSay]
+ko: 네, 이전 질문으로 돌아갈게요.
+en: Sure, let's go back to the previous question.
+
 [editCancel]
 ko: 그대로 둘게요
 en: Never mind
