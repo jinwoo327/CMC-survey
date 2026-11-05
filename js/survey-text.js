@@ -856,8 +856,8 @@ ko: 저장 중…
 en: Saving…
 
 [savingHint]
-ko: 최대 1분 정도 걸릴 수 있어요
-en: This can take up to a minute.
+ko: 보통 1분 안에 끝나지만, 연결이 느리면 최대 3분 정도 걸릴 수 있어요.
+en: This usually takes under a minute, but it can take up to 3 minutes on a slow connection.
 
 [resubmit]
 ko: 다시 제출하기
@@ -940,9 +940,14 @@ en: Connecting to the server that saves your answers… {s}s (this can take abou
 ko: 저장 서버에 연결하는 중이에요…
 en: Connecting to the server that saves your answers…
 
+# 설문 시작 전 채팅에서 뒤로 가기를 눌렀을 때 (한 번 더 누르면 실제로 나가요)
+[backWarn]
+ko: 여기서 나가면 지금까지 입력한 답변이 사라져요. 그래도 나가려면 뒤로 가기를 한 번 더 눌러 주세요.
+en: If you leave now, the answers you've entered will be lost. To leave anyway, press Back again.
+
 [slowServer]
-ko: 저장 서버 연결이 오래 걸리고 있어요. 잠시 후 다시 시도해 주세요.
-en: It's taking a while to connect to the server. Please try again in a moment.
+ko: 저장 서버에 연결하지 못했어요. 인터넷 연결을 확인한 뒤 다시 시도해 주세요.
+en: We couldn't reach the server. Please check your connection and try again.
 
 [retry]
 ko: 다시 시도

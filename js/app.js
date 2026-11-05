@@ -59,7 +59,7 @@ const KEYS=("pickHeading pickSub pickKo pickEn pickGo hello about steps privacy 
   "toScenario fourSits oneHint startScen q1 anchorLow anchorHigh scaleLabel q2 q2small otherPh errQ1 errQ2 errOther progSit progCount live "+
   "notice1 noticeNew sentAt now phoneLabel unread fakeInput prev next submit saving savingHint resubmit submitInvalid submitFail "+
   "thanks saved respId deleteNote already resumeTitle resumeNote resumeGo resumeOther resumeGoOther resumeRestart "+
-  "connecting connectingSec reconnecting slowServer retry errDetail serverFail ended errFormat errTimeout errNetwork errConfirm errOffline "+
+  "connecting connectingSec reconnecting slowServer retry errDetail serverFail ended errFormat errTimeout errNetwork errConfirm errOffline backWarn "+
   "title chatTitle dayPill botName typing clockAM clockPM send newMsg "+
   "phoneSeen phoneUnseen chgTitle chgRel chgTime chgRead t2h t1d stRead stUnread liveChg").split(" ")
   .concat(...RELS.map(r=>["chip","contact","msg","think","thrAsk"].map(f=>"rel."+r.key+"."+f)),
@@ -95,7 +95,14 @@ function rich(k,vars,cls){
 const relTx=(key,f)=>tx("rel."+key+"."+f);
 
 const app=document.getElementById("app");
+const root=document.documentElement;
 const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+// A text box that appears must not pop the on-screen keyboard open by itself: it would cover the question being
+// asked, so a finger or stylus user taps the box when ready. Mouse and keyboard users keep autofocus. Based on the
+// last press, not the device: touch laptops report maxTouchPoints>0 and some phones report pointer:fine.
+let usingTouch=false;
+addEventListener("pointerdown",e=>{usingTouch=e.pointerType!=="mouse"},true);
+const autoFocus=el=>{if(!usingTouch)el.focus({preventScroll:true})};
 const WIDE=matchMedia("(min-width: 880px), (min-width: 640px) and (max-height: 500px)");
 const wait=ms=>new Promise(r=>setTimeout(r,reduce?Math.min(ms,120):ms));
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -106,7 +113,7 @@ const natText=v=>v===NO_ANSWER?tx("natPrefer"):v;
 const hintEl=text=>$("div",{class:"hint"},text);
 function setApp(cls){
   if(ro){ro.disconnect();ro=null}
-  document.documentElement.style.scrollPaddingTop="";
+  root.style.scrollPaddingTop="";
   app.className="app"+(cls?" "+cls:"");app.innerHTML="";
 }
 
@@ -137,7 +144,7 @@ async function callEndpoint(method,body){
   }finally{clearTimeout(tm)}
 }
 function warmUp(){if(ENDPOINT)callEndpoint("GET").catch(()=>{})}
-const errText=e=>e&&e.name==="AbortError"?tx("errTimeout"):(e&&e.message)||tx("errNetwork");
+const errText=e=>e&&e.name==="AbortError"?tx("errTimeout"):e&&e.name==="SyntaxError"?tx("errFormat"):e&&e.name==="TypeError"?tx("errNetwork"):(e&&e.message)||tx("errNetwork");
 
 /* ================= saved progress (resume after reload) ================= */
 function saveProgress(){
@@ -172,6 +179,7 @@ function pickerScreen(){
   S.phase="pick";setApp("bare");
   const q=/[?&]lang=(ko|en)(?:&|$)/.exec(location.search),saved=store.get(LANG_KEY);
   let cur=q?q[1]:saved==="en"||saved==="ko"?saved:"ko";
+  const label=()=>{document.title=tx("title",null,cur);root.lang=cur};label();
   const go=$("button",{type:"submit",class:"btn main",id:"pick-go",lang:cur},tx("pickGo",null,cur));
   // each option shows its name in its own language, with the other language underneath
   const opts=["ko","en"].map(v=>{const k=v==="ko"?"pickKo":"pickEn",o=v==="ko"?"en":"ko";return $("label",{class:"lang"+(v===cur?" on":"")},
@@ -179,7 +187,7 @@ function pickerScreen(){
     $("span",null,$("b",{lang:v},tx(k,null,v)),$("small",{lang:o},tx(k,null,o))))});
   const both=(k,sep)=>[$("span",{lang:"en"},tx(k,null,"en")),sep,$("span",{lang:"ko"},tx(k,null,"ko"))];
   const card=$("form",{class:"card",id:"picker-card",role:"dialog","aria-modal":"true","aria-labelledby":"pick-h","aria-describedby":"pick-sub",tabindex:"-1",
-      onchange:e=>{cur=e.target.value;opts.forEach(l=>l.classList.toggle("on",l.querySelector("input").checked));go.textContent=tx("pickGo",null,cur);go.lang=cur},
+      onchange:e=>{cur=e.target.value;opts.forEach(l=>l.classList.toggle("on",l.querySelector("input").checked));go.textContent=tx("pickGo",null,cur);go.lang=cur;label()},
       onsubmit:e=>{e.preventDefault();chooseLang(cur)}},
     $("div",{class:"head"},
       $("div",{class:"globe",html:ICON.globe,"aria-hidden":"true"}),
@@ -193,7 +201,11 @@ function pickerScreen(){
 function setLang(v){S.lang=v;document.documentElement.lang=v;document.documentElement.classList.toggle("ig",IG_LANGS.includes(v));document.title=tx("title");store.set(LANG_KEY,v)}
 function chooseLang(v){
   setLang(v);
-  if(store.get(DONE_KEY))return introScreen(async()=>{S.phase="done";await bot(tx("already"));composer().append(hintEl(tx("ended")))});
+  if(store.get(DONE_KEY))return introScreen(async()=>{
+    S.phase="done";await bot(tx("already"));
+    const id=store.get(DONE_KEY);if(/^R-[A-Z0-9]{8}$/.test(id))await bot(tx("respId",{id})+"\n"+tx("deleteNote"));
+    composer().append(hintEl(tx("ended")));
+  });
   const p=loadProgress();
   if(p)return resumeScreen(p);
   introScreen();
@@ -243,7 +255,26 @@ function follow(){
   log.scrollTop=y;autoTop=log.scrollTop;pinned=true;pill.hidden=true;
 }
 const settle=()=>requestAnimationFrame(()=>{if(pinned&&log)follow()});
-if(window.visualViewport)visualViewport.addEventListener("resize",()=>{if(S.phase==="intro"&&log&&pinned)follow()});
+// iOS Safari and most in-app browsers ignore interactive-widget=resizes-content: the keyboard only shrinks the
+// visual viewport, and a 100dvh layout stays behind it. So the chat (.app.fill) is pinned to the visual viewport
+// through --vv-h / --vv-top, which puts the composer right on top of the keyboard in every browser.
+function syncViewport(){
+  const vv=window.visualViewport;
+  if(!vv)return;
+  // pinch-zoom changes these numbers too: drop them so the layout goes back to the CSS default, not stale values
+  if(vv.scale>1.01){root.style.removeProperty("--vv-h");root.style.removeProperty("--vv-top");return}
+  root.style.setProperty("--vv-h",vv.height+"px");
+  root.style.setProperty("--vv-top",vv.offsetTop+"px");
+}
+if(window.visualViewport){
+  syncViewport();
+  visualViewport.addEventListener("scroll",syncViewport);
+  visualViewport.addEventListener("resize",()=>{
+    syncViewport();if(S.phase!=="intro")return;
+    if(log&&pinned)follow();
+    const a=document.activeElement;if(a&&a.tagName==="INPUT")a.scrollIntoView({block:"nearest"});
+  });
+}
 async function bot(text,delay){
   let grp=lastBotGroup;
   if(!grp){
@@ -260,12 +291,14 @@ async function bot(text,delay){
   if(pinned)follow();else pill.hidden=false;
 }
 function me(text){
-  lastBotGroup=null;anchor=null;
+  lastBotGroup=null;anchor=null;backWarned=null;
+  if(S.phase==="intro"&&S.consentAt)ensureGuard();
   log.append($("div",{class:"row me"},$("div",{class:"meta"},$("span",null,nowLabel())),$("div",{class:"bubble"},text)));
   follow();
 }
 function nowLabel(){const d=new Date(),h=d.getHours();return tx(h<12?"clockAM":"clockPM",{h:(h%12)||12,m:String(d.getMinutes()).padStart(2,"0")})}
 function composer(){return document.getElementById("composer")}
+function showErr(err,msg,inp){err.textContent=msg;if(inp)inp.focus();err.scrollIntoView({block:"nearest"})}
 
 function askChoice(options,o={}){
   return new Promise(res=>{
@@ -278,16 +311,16 @@ function askChoice(options,o={}){
     settle();
   });
 }
-function askText({placeholder,type="text",validate,id,hint}){
+function askText({placeholder,type="text",validate,id,hint,label}){
   return new Promise(res=>{
     const c=composer();c.innerHTML="";
-    const inp=$("input",{class:"field",id,type:"text",placeholder,autocomplete:"off",inputmode:type==="int"?"numeric":null,enterkeyhint:"send"});
+    const inp=$("input",{class:"field",id,type:"text",placeholder,autocomplete:"off",inputmode:type==="int"?"numeric":null,enterkeyhint:"send","aria-label":label});
     const err=$("div",{class:"err",role:"alert"});
-    const go=()=>{const v=inp.value.trim();const r=validate(v);if(r.error){err.textContent=r.error;inp.focus();return}c.innerHTML="";me(r.display);res(r.value)};
+    const go=()=>{const v=inp.value.trim();const r=validate(v);if(r.error){showErr(err,r.error,inp);return}c.innerHTML="";me(r.display);res(r.value)};
     inp.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.isComposing){e.preventDefault();go()}});
     c.append($("div",{class:"inline"},inp,$("button",{type:"button",class:"send",onclick:go},tx("send"))));
     if(hint)c.append(hintEl(hint));
-    c.append(err);inp.focus({preventScroll:true});settle();
+    c.append(err);autoFocus(inp);settle();
   });
 }
 // No unit is preselected: a number > 0 needs an explicit unit; 0 (reply habit only) is stored as 0분.
@@ -301,24 +334,25 @@ function askDuration({id,allowZero,hint}){
     Object.keys(UNIT_MIN).forEach(u=>seg.append($("button",{type:"button","data-unit":u,"aria-pressed":"false",onclick:()=>{
       unit=u;seg.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",String(x.dataset.unit===u)));err.textContent="";}},tx(UNIT_KEY[u]))));
     const go=()=>{
-      const raw=inp.value.trim().replace(",",".");const v=Number(raw);
-      if(raw===""||!isFinite(v)){err.textContent=tx("durErrNum");inp.focus();return}
-      if(v<0||(!allowZero&&v===0)){err.textContent=tx(allowZero?"durErrMin0":"durErrPos");inp.focus();return}
-      if(v>0&&!unit){err.textContent=tx("durErrUnit");return}
+      // "1,440" is a thousands comma, "1,5" a decimal comma
+      const t=inp.value.normalize("NFKC").trim(),raw=/^[1-9]\d{0,2}(,\d{3})+$/.test(t)?t.replace(/,/g,""):t.replace(",",".");const v=Number(raw);
+      if(raw===""||!isFinite(v)){showErr(err,tx("durErrNum"),inp);return}
+      if(v<0||(!allowZero&&v===0)){showErr(err,tx(allowZero?"durErrMin0":"durErrPos"),inp);return}
+      if(v>0&&!unit){showErr(err,tx("durErrUnit"));return}
       const u=v===0?"분":unit;
       const minutes=Math.round(v*UNIT_MIN[u]*100)/100;
-      if(minutes>60*24*60){err.textContent=tx("durErrMax");inp.focus();return}
+      if(minutes>60*24*60){showErr(err,tx("durErrMax"),inp);return}
       c.innerHTML="";me(durText({value:v,unit:u}));res({value:v,unit:u,minutes});
     };
     inp.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.isComposing){e.preventDefault();go()}});
     c.append($("div",{class:"inline"},inp,seg,$("button",{type:"button",class:"send",onclick:go},tx("send"))));
-    if(hint)c.append(hintEl(hint));
-    c.append(err);inp.focus({preventScroll:true});settle();
+    if(hint){const h=hintEl(hint);h.id=id+"-hint";inp.setAttribute("aria-describedby",h.id);c.append(h)}
+    c.append(err);autoFocus(inp);settle();
   });
 }
 
 /* ---------- nationality (English only): type to filter the country list, tap a match ---------- */
-const norm=s=>String(s).normalize("NFD").replace(/\p{M}/gu,"").toLowerCase().replace(/[.'’]/g,"").replace(/[^a-z0-9]+/g," ").trim();
+const norm=s=>String(s).normalize("NFD").replace(/\p{M}/gu,"").toLowerCase().replace(/[.'’]/g,"").replace(/&/g," and ").replace(/[^a-z0-9]+/g," ").trim().replace(/^the (?=.)/,"");
 const COUNTRIES=(window.SURVEY_COUNTRIES||[]).map((names,i)=>({name:names[0],i,keys:names.map(norm)}));
 // rank: exact name 0, exact alias 1, name starts with 2, a word in the name starts with 3, alias prefix 4/5
 function findCountries(raw){
@@ -329,7 +363,7 @@ function findCountries(raw){
     c.keys.forEach((k,j)=>{const m=k===q?(j?1:0):k.startsWith(q)?(j?4:2):k.includes(" "+q)?(j?5:3):9;if(m<9){n++;s=Math.min(s,m)}});
     if(s<9)out.push({name:c.name,s,n,i:c.i});
   });
-  return out.sort((a,b)=>a.s-b.s||b.n-a.n||a.i-b.i);
+  return(out.some(x=>x.s<=1)?out.filter(x=>x.s<5):out).sort((a,b)=>a.s-b.s||b.n-a.n||a.i-b.i);
 }
 function askCountry(){
   return new Promise(res=>{
@@ -348,11 +382,11 @@ function askCountry(){
       else{found.slice(0,6).forEach(m=>sugs.append(sug(m.name,m.name,m.name)));live.textContent=found.length>6?tx("natMore",{n:found.length}):found.length===1?tx("natCount1"):tx("natCount",{n:found.length})}
     };
     const go=()=>{
-      if(!inp.value.trim()){err.textContent=tx("natErrEmpty");inp.focus();return}
+      if(!inp.value.trim()){showErr(err,tx("natErrEmpty"),inp);return}
       const exact=found.filter(m=>m.s<=1);
       if(exact.length===1)return pick(exact[0].name,exact[0].name);
       if(found.length===1)return pick(found[0].name,found[0].name);
-      err.textContent=tx("natErrPick");inp.focus();
+      showErr(err,tx("natErrPick"),inp);
     };
     inp.addEventListener("input",update);
     inp.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.isComposing){e.preventDefault();go()}});
@@ -360,7 +394,7 @@ function askCountry(){
       $("div",{class:"inline"},inp,$("button",{type:"button",class:"send",onclick:go},tx("send"))),
       $("div",{class:"chips"},$("button",{type:"button",class:"chip",id:"nat-prefer",onclick:()=>pick(NO_ANSWER,tx("natPrefer"))},tx("natPrefer"))),
       live,err);
-    inp.focus({preventScroll:true});settle();
+    autoFocus(inp);settle();
   });
 }
 
@@ -368,8 +402,9 @@ function askCountry(){
 const Q={
   async age(again){
     await bot(tx(again?"ageAgain":"age"));
-    S.demo.age=await askText({id:"in-age",type:"int",placeholder:tx("agePh"),validate:v=>{
-      if(!/^\d{1,3}$/.test(v))return{error:tx("ageErrNum")};
+    S.demo.age=await askText({id:"in-age",type:"int",placeholder:tx("agePh"),label:tx("editAge"),validate:v=>{
+      v=v.normalize("NFKC");
+      if(!/^\d+$/.test(v))return{error:tx("ageErrNum")};
       const n=+v;if(n<15||n>99)return{error:tx("ageErrRange")};
       return{value:n,display:tx("ageEcho",{n})};}});
   },
@@ -383,7 +418,7 @@ const Q={
   },
   async major(){
     await bot(tx("major"));
-    S.demo.major=await askText({id:"in-major",placeholder:tx("majorPh"),validate:v=>{
+    S.demo.major=await askText({id:"in-major",placeholder:tx("majorPh"),label:tx("editMajor"),validate:v=>{
       if(!v)return{error:tx("majorErrEmpty")};if(v.length>40)return{error:tx("majorErrLong")};return{value:v,display:v};}});
   },
   async habit(){
@@ -404,6 +439,7 @@ async function runIntro(){
   await bot(tx("privacy"));
   await askConsent();
   S.consentAt=new Date().toISOString();
+  ensureGuard();  // from here on a single Back would throw answers away (see the popstate listener)
   if(!await serverGate())return;
 
   await Q.age();
@@ -486,10 +522,12 @@ async function review(){
 // One extra history entry so the phone's back gesture goes to the previous trial instead of leaving.
 // guarded = the current entry is that guard (also true after a reload while on it).
 const onGuard=()=>!!(history.state&&history.state.survey==="guard");
-let guarded=onGuard(),submitting=false,live=null;
+let guarded=onGuard(),submitting=false,live=null,backWarned=null;
 function ensureGuard(){if(!guarded){try{history.pushState({survey:"guard"},"")}catch(e){}guarded=true}}
 addEventListener("popstate",()=>{
   const was=guarded;guarded=onGuard();
+  // chat: nothing is saved before the scenario, so the first Back only warns and the next one leaves
+  if(S.phase==="intro"&&was&&!guarded&&!(backWarned&&backWarned.isConnected)){ensureGuard();const m=tx("backWarn");backWarned=hintEl(m);composer().prepend(backWarned);announce(m);return}
   // a guard left over from a reload mid-scenario: one Back press leaves (instead of only popping the guard)
   if(S.phase!=="scenario"){if(was&&!guarded&&S.phase!=="done")history.back();return}
   if(guarded)return;
@@ -538,13 +576,17 @@ function scenarioScreen(moved){
       $("div",{class:"chatarea"},
         $("div",{class:C("daypill",chg.time)},sit("sentDay")),
         $("div",{class:"row me fade"},
-          $("div",{class:"meta"},s.read?null:$("span",{class:C("unread",chg.read),"aria-label":tx("unread")},"1"),$("span",{class:chg.time?"chg":null},sit("sentTime"))),
+          $("div",{class:"meta"},s.read?null:$("span",{class:C("unread",chg.read),role:"img","aria-label":tx("unread")},"1"),$("span",{class:chg.time?"chg":null},sit("sentTime"))),
           $("div",{class:"bubble"},relTx(rk,"msg")))),
       $("div",{class:"fakeinput","aria-hidden":"true"},$("span",{html:ICON.plus}),$("span",null,tx("fakeInput"))));
   }
 
   // sheet
   const sheet=$("form",{class:"sheet",novalidate:true,onsubmit:e=>{e.preventDefault();next()}});
+  // A double tap on Next / Prev / Start must not land on the freshly drawn trial and record an answer nobody chose.
+  // Keyboard activation (detail 0) stays live.
+  const shownAt=performance.now();
+  sheet.addEventListener("click",e=>{if(e.detail>0&&performance.now()-shownAt<400){e.preventDefault();e.stopPropagation()}},true);
   const head=$("h2",{tabindex:"-1"},tx("progSit",{n:s.n}));
   sheet.append($("div",{class:"progress"},
     $("div",{class:"top"},head,$("span",null,tx("progCount",{i:S.idx+1,total:TRIALS.length}))),
@@ -577,23 +619,24 @@ function scenarioScreen(moved){
 
   // Q1
   const q1=$("fieldset",{class:"q"});
-  const scale=$("div",{class:"scale",role:"radiogroup","aria-labelledby":"q1h"});
+  const scale=$("div",{class:"scale",role:"radiogroup","aria-labelledby":"q1h","aria-describedby":"q1ends"});
   for(let i=1;i<=10;i++){
     scale.append($("button",{type:"button",role:"radio","aria-checked":String(ans.concern===i),"aria-label":tx("scaleLabel",{n:i}),onclick:()=>{
       ans.concern=i;scale.querySelectorAll("button").forEach((b,j)=>b.setAttribute("aria-checked",String(j+1===i)));clearErr(q1);saveProgress()}},String(i)));
   }
-  q1.append($("h3",{id:"q1h"},mark($("span",{class:"ctx"},rich("sit"+s.n+".q1ctx"))),tx("q1")),scale,$("div",{class:"ends"},$("span",null,tx("anchorLow")),$("span",null,tx("anchorHigh"))));
+  q1.append($("h3",{id:"q1h"},mark($("span",{class:"ctx"},rich("sit"+s.n+".q1ctx"))),tx("q1")),scale,$("div",{class:"ends",id:"q1ends"},$("span",null,tx("anchorLow")),$("span",null,tx("anchorHigh"))));
 
   // Q2
   const q2=$("fieldset",{class:"q"});
   const grp=s.read?"read":"unread";
   const opts=$("div",{class:"opts",role:"radiogroup","aria-labelledby":"q2h"});
-  const other=$("input",{class:"other",id:"other-"+key,type:"text",maxlength:"200",placeholder:tx("otherPh"),"aria-label":tx("otherPh"),value:ans.other,hidden:ans.reason!=="other"});
+  const other=$("input",{class:"other",id:"other-"+key,type:"text",maxlength:"200",enterkeyhint:"done",placeholder:tx("otherPh"),"aria-label":tx("otherPh"),value:ans.other,hidden:ans.reason!=="other"});
   other.addEventListener("input",()=>{ans.other=other.value;if(other.value.trim())clearErr(q2);saveProgress()});
+  other.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.isComposing){e.preventDefault();other.blur()}});
   REASONS[grp].forEach(code=>{
-    opts.append($("button",{type:"button",class:"opt",role:"radio","aria-checked":String(ans.reason===code),"data-code":code,onclick:()=>{
+    opts.append($("button",{type:"button",class:"opt",role:"radio","aria-checked":String(ans.reason===code),"data-code":code,onclick:e=>{
       ans.reason=code;opts.querySelectorAll(".opt").forEach(b=>b.setAttribute("aria-checked",String(b.dataset.code===code)));
-      other.hidden=code!=="other";if(code==="other")other.focus();clearErr(q2);saveProgress();}},$("span",{class:"dot"}),$("span",null,tx("reason."+grp+"."+code))));
+      other.hidden=code!=="other";if(code==="other"){if(usingTouch)other.scrollIntoView({block:"nearest"});else if(e.detail>0)other.focus()}clearErr(q2);saveProgress();}},$("span",{class:"dot"}),$("span",null,tx("reason."+grp+"."+code))));
   });
   q2.append($("h3",{id:"q2h"},tx("q2"),$("small",null,tx("q2small"))),opts,other);
   radioGroup(scale);radioGroup(opts);
@@ -604,11 +647,11 @@ function scenarioScreen(moved){
   const nav=$("div",{class:"nav"},S.idx>0?$("button",{type:"button",class:"btn ghost",id:"prevbtn",onclick:()=>go(-1)},tx("prev")):null,nextBtn);
   sheet.append(q1,q2,nav,status);
   // a focused text field un-sticks the phone so the keyboard doesn't squeeze the sheet under it
-  sheet.addEventListener("focusin",e=>{if(e.target.tagName==="INPUT")scr.classList.add("kbd")});
-  sheet.addEventListener("focusout",e=>{if(e.target.tagName==="INPUT")scr.classList.remove("kbd")});
+  sheet.addEventListener("focusin",e=>{if(e.target.tagName==="INPUT"){scr.classList.add("kbd");syncPad(phone)}});
+  sheet.addEventListener("focusout",e=>{if(e.target.tagName==="INPUT"){scr.classList.remove("kbd");syncPad(phone)}});
   scr.append(phone,sheet);app.append(scr);
 
-  place(phone,changes||guide);
+  rePlace=()=>place(phone,changes||guide);placedAt=performance.now();rePlace();
   head.focus({preventScroll:true});
   announce(tx("live",{i:S.idx+1,total:TRIALS.length,name:relTx(rk,"chip")})+(chgSay.length?". "+tx("liveChg",{list:chgSay.join(", ")}):""));
   if(moved){
@@ -617,7 +660,7 @@ function scenarioScreen(moved){
   }
 
   function clearErr(q){q.classList.remove("invalid");const e=q.querySelector(".qerr");if(e)e.remove()}
-  function setErr(q,msg){clearErr(q);q.classList.add("invalid");q.append($("div",{class:"qerr",role:"alert"},msg))}
+  function setErr(q,msg){clearErr(q);q.classList.add("invalid");q.querySelector("h3").after($("div",{class:"qerr",role:"alert"},msg))}
   function go(d){if(submitting)return;S.idx+=d;saveProgress();scenarioScreen(true)}
   async function next(){
     if(submitting)return;
@@ -625,7 +668,7 @@ function scenarioScreen(moved){
     if(ans.concern==null){setErr(q1,tx("errQ1"));bad=bad||q1}
     if(!ans.reason){setErr(q2,tx("errQ2"));bad=bad||q2}
     else if(ans.reason==="other"&&!ans.other.trim()){setErr(q2,tx("errOther"));bad=bad||q2}
-    if(bad){bad.scrollIntoView({behavior:reduce?"auto":"smooth",block:"center"});return}
+    if(bad){if(bad===q2&&ans.reason==="other")other.focus();else{badQ=bad;badAt=performance.now();bad.scrollIntoView({behavior:reduce?"auto":"smooth",block:"start"})}return}
     if(!last)return go(1);
     const btns=[...nav.querySelectorAll("button")];
     submitting=true;btns.forEach(b=>b.disabled=true);q1.disabled=q2.disabled=true;
@@ -636,7 +679,7 @@ function scenarioScreen(moved){
     if(res.ok){
       S.phase="done";store.del(PROGRESS_KEY);endScreen();
       if(guarded){guarded=false;history.back()}  // drop the guard entry so Back leaves normally
-    }else{btns.forEach(b=>b.disabled=false);q1.disabled=q2.disabled=false;nextBtn.textContent=tx("resubmit");status.className="msg bad";status.textContent=res.message;status.scrollIntoView({block:"nearest"})}
+    }else{btns.forEach(b=>b.disabled=false);q1.disabled=q2.disabled=false;nextBtn.textContent=tx("resubmit");status.className="msg bad";status.textContent=res.message;status.scrollIntoView({block:"nearest"});if(document.activeElement===document.body)nextBtn.focus({preventScroll:true})}
   }
 }
 // After 다음/이전 (instant, no smooth scroll).
@@ -645,12 +688,24 @@ function scenarioScreen(moved){
 // Wide layout (phone in its own sticky column): top, unless the Q1 scale doesn't fit (landscape phones):
 // then only as far as it needs, never past the notice / guide.
 // Short screens (phone not sticky): top, so the phone (the stimulus that just changed) stays in view.
+// Rotation or a closing keyboard changes the geometry: lay out again right after a render, otherwise refresh the padding.
+let rePlace=null,placedAt=0,badQ=null,badAt=0;
+addEventListener("resize",()=>{
+  if(S.phase!=="scenario"||!rePlace)return;
+  if(performance.now()-placedAt<800)return rePlace();
+  syncPad(document.querySelector(".phone"));
+  if(badQ&&badQ.isConnected&&performance.now()-badAt<800)badQ.scrollIntoView({block:"start"});
+});
+// keyboard focus and scrollIntoView must not land under the sticky phone; false when the phone doesn't overlay the page
+function syncPad(phone){
+  const overlay=!WIDE.matches&&getComputedStyle(phone).position==="sticky";
+  root.style.scrollPaddingTop=overlay?phone.getBoundingClientRect().height+12+"px":"";
+  return overlay;
+}
 function place(phone,guide){
   const abs=el=>el.getBoundingClientRect().top+window.scrollY,ends=document.querySelector(".ends"),need=abs(ends)+ends.offsetHeight+8-window.innerHeight;
-  const wide=WIDE.matches,overlay=!wide&&getComputedStyle(phone).position==="sticky",off=overlay?phone.getBoundingClientRect().height:0;
+  const wide=WIDE.matches,overlay=syncPad(phone),off=overlay?phone.getBoundingClientRect().height:0;
   const first=S.idx%4===0,n=document.querySelector(".notice");
-  // keyboard focus moving up must not land under the sticky phone
-  document.documentElement.style.scrollPaddingTop=overlay?off+12+"px":"";
   const y=overlay?(first?Math.min(need,abs(n)-off-6):abs(guide)-off-12)
     :wide?Math.min(need,abs(first?n:guide)-12):0;
   window.scrollTo(0,Math.max(0,y));
@@ -704,6 +759,7 @@ function endScreen(){
     $("div",{class:"idbox"},tx("respId",{id:S.anonId})),
     $("p",{style:"font-size:13px"},tx("deleteNote")))));
   window.scrollTo(0,0);
+  announce(tx("thanks")+" "+tx("saved")+" "+tx("respId",{id:S.anonId}));
 }
 
 /* ================= boot ================= */
